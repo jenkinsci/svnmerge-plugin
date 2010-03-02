@@ -1,0 +1,10 @@
+<!--
+  Show the upstream project
+-->
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  <h2>${%Subversion Merge Tracking}</h2>
+  <p style="margin-left:1em">
+    This project is a feature branch of
+    <t:jobLink job="${it.branchProperty.upstreamProject}" />
+  </p>
+</j:jelly>

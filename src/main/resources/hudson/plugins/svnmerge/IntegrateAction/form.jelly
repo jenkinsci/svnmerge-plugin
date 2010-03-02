@@ -1,0 +1,27 @@
+<!--
+  Display the form to start integration
+-->
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  <l:layout norefresh="true" title="#${it.build.number} Integration">
+    <st:include it="${it.build}" page="sidepanel.jelly" />
+    <l:main-panel>
+      <h1>
+        <img src="${rootURL}/plugin/svnmerge/48x48/integrate.gif" />
+        Integrate #${it.build.number} to upstream
+      </h1>
+
+      <p>
+        This will merge ${it.svnInfo} to <t:jobLink job="${it.property.upstreamProject}" />
+      </p>
+
+      <form action="integrate" method="post" name="integrate">
+        <f:submit value="${%Integrate this build to upstream}"/>
+      </form>
+
+      <j:if test="${it.integratedRevision lt 0}">
+        <h2 style="margin-top:2em">Last Failure</h2>
+        <pre><st:copyStream reader="${it.log.readAll()}" /></pre>
+      </j:if>
+    </l:main-panel>
+  </l:layout>
+</j:jelly>

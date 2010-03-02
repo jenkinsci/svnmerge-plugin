@@ -1,0 +1,14 @@
+<div>
+    This option is used in conjunction with the "Enable Subversion Merge Tracking" option
+    (which appears early in the configuration.)
+
+    <p>
+    When this option is set, Hudson will automatically integrate a succesful build to
+    the upstream Subversion branch via "svn merge". Failure to do so results in a build failure
+    (for example, when a conflict is discovered during a merge.)
+
+    <p>
+    This feature allows you to use a Subversion branch as a gate keeper. Instead of
+    committing directly to the upstream, you commit to your branch, and let Hudson
+    auto-commit that to the upstream after making sure that the branch builds.
+</div>

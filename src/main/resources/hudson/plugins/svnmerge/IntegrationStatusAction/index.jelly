@@ -1,0 +1,33 @@
+<!--
+  Show the last integration status
+-->
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  <l:layout norefresh="true" title="${it.project.displayName} Integration Status">
+    <st:include it="${it.project}" page="sidepanel.jelly" />
+    <l:main-panel>
+      <h1>
+        <img src="${rootURL}/plugin/svnmerge/48x48/integrate.gif" />
+        Integration Status
+      </h1>
+
+      <j:set var="ia" value="${it.lastIntegrateAction}" />
+      <j:choose>
+        <j:when test="${ia==null}">
+          <p>
+            This project has not been integrated to
+            <a href="${h.getRelativeLinkTo(it.branchProperty.upstreamProject)}">the upstream</a> yet.
+          </p>
+        </j:when>
+        <j:otherwise>
+          <p>
+            Last Integration is from <t:buildLink job="${it.project}" number="${ia.build.number}" />
+            (${ia.build.timestampString} ago)
+          </p>
+          <p>
+            Subversion Revision: ${ia.integratedRevision}
+          </p>
+        </j:otherwise>
+      </j:choose>
+    </l:main-panel>
+  </l:layout>
+</j:jelly>

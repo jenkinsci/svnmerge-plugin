@@ -1,0 +1,12 @@
+<!--
+  Integration is complete. Display the record.
+-->
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  <j:set var="n" value="${it.getUpstreamBuildNumber()}" />
+  <j:if test="${n gt -1}">
+    <t:summary icon="/plugin/svnmerge/48x48/integrate.gif">
+      This build is integrated into
+      <t:buildLink jobName="${it.property.upstream}" job="${it.property.upstreamProject}" number="${n}"/>
+    </t:summary>
+  </j:if>
+</j:jelly>

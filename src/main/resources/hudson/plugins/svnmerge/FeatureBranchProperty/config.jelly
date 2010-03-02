@@ -1,0 +1,19 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define"
+	xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form"
+	xmlns:i="jelly:fmt" xmlns:p="/lib/hudson/project">
+
+  <f:optionalBlock name="svnmerge" title="${%This project builds a Subversion feature branch}"
+                   checked="${instance!=null}" help="/plugin/svnmerge/help/upstream.html">
+    <f:nested>
+      <table width="100%">
+        <f:entry title="${%Upstream project name}:">
+          <f:editableComboBox id="${h.generateId()}" field="upstream" clazz="setting-input">
+            <j:forEach var="u" items="${descriptor.listIntegratableProjects()}">
+              <f:editableComboBoxValue value="${u.name}" />
+            </j:forEach>
+          </f:editableComboBox>
+        </f:entry>
+      </table>
+    </f:nested>
+  </f:optionalBlock>
+</j:jelly>

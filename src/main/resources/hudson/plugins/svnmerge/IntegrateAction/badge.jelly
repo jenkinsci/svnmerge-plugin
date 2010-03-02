@@ -1,0 +1,18 @@
+<j:if test="${it.integrationAttempted}" xmlns:j="jelly:core">
+  <a href="${rootURL}/${it.build.url}integrate-branch/">
+    <j:choose>
+      <j:when test="${it.integratedRevision lt 0}">
+        <img width="16" height="16"
+          tooltip="${%Integration Failed}"
+          alt="[integration failed]"
+          src="${rootURL}/plugin/svnmerge/16x16/failed-integrate.gif"/>
+      </j:when>
+      <j:otherwise>
+        <img width="16" height="16"
+          tooltip="${%Integrated}"
+          alt="[integrated]"
+          src="${rootURL}/plugin/svnmerge/16x16/integrate.gif"/>
+      </j:otherwise>
+    </j:choose>
+  </a>
+</j:if>
