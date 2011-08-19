@@ -54,7 +54,7 @@ public class RebaseAction extends AbstractSvnmergeTaskAction {
         return getProperty()!=null;
     }
 
-    protected File getLogFile() {
+    public File getLogFile() {
         return new File(project.getRootDir(),"rebase.log");
     }
 

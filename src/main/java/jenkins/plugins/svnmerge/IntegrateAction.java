@@ -86,7 +86,7 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction implements Build
         return integratedRevision;
     }
 
-    protected File getLogFile() {
+    public File getLogFile() {
         return new File(build.getRootDir(),"integrate.log");
     }
 
