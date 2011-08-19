@@ -31,6 +31,7 @@ import org.tmatesoft.svn.core.wc.SVNDiffClient;
 import org.tmatesoft.svn.core.wc.SVNEvent;
 import org.tmatesoft.svn.core.wc.SVNInfo;
 import org.tmatesoft.svn.core.wc.SVNRevision;
+import org.tmatesoft.svn.core.wc.SVNRevisionRange;
 import org.tmatesoft.svn.core.wc.SVNStatusType;
 import org.tmatesoft.svn.core.wc.SVNUpdateClient;
 import org.tmatesoft.svn.core.wc.SVNWCClient;
@@ -39,6 +40,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -116,8 +118,9 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
         return true;
     }
 
+
     /**
-     * Perform a merge to the upstream and integrate changes in this branch.
+     * Perform a merge to the upstream that integrates changes in this branch.
      *
      * <p>
      * This computation uses the workspace of the project.
@@ -187,6 +190,22 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
 
                     logger.println("Switching back to the branch (" + wsState.getURL()+"@"+wsState.getRevision()+")");
                     uc.doSwitch(mr, wsState.getURL(), wsState.getRevision(), wsState.getRevision(), INFINITY, false, true);
+
+
+                    if (ci!=null && ci.getNewRevision()>=0) {
+                        // if the trunk merge produces a commit M, then we want to do "svn merge --record-only -c M <UpstreamURL>"
+                        // to convince Subversion not to try to merge rev.M again when re-integrating from the trunk in the future,
+                        // equivalent of single commit
+                        SVNRevisionRange r = new SVNRevisionRange(SVNRevision.create(ci.getNewRevision()-1),
+                                                                  SVNRevision.create(ci.getNewRevision()));
+                        String msg = "Block the merge commit rev." + ci.getNewRevision() + " from getting merged back into our branch";
+                        logger.println(msg);
+                        dc.doMerge(up,HEAD,Arrays.asList(r), mr, INFINITY, true/*opposite of --ignore-ancestory in CLI*/, false, false, true);
+
+                        SVNCommitClient cc = cm.getCommitClient();
+                        SVNCommitInfo bci = cc.doCommit(new File[]{mr}, false, msg, null, null, false, false, INFINITY);
+                        logger.println("  committed revision "+bci.getNewRevision());
+                    }
 
                     if(foundConflict[0]) {
                         logger.println("Conflict found. Please sync with the upstream to resolve this error.");
