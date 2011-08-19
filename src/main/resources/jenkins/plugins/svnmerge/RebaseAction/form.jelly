@@ -19,7 +19,7 @@
         <f:submit value="${%Integrate changes from upstream}"/>
       </form>
 
-      <j:if test="${it.log.exists()}">
+      <j:if test="${it.logFile.exists()}">
         <h2 style="margin-top:2em">${%Result of Last Rebase}</h2>
         <pre><st:copyStream reader="${it.log.readAll()}" /></pre>
       </j:if>
