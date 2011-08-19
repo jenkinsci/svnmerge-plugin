@@ -1,24 +1,24 @@
-package hudson.plugins.svnmerge;
+package jenkins.plugins.svnmerge;
 
-import org.jvnet.hudson.test.HudsonTestCase;
-import hudson.model.FreeStyleProject;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
+import hudson.model.FreeStyleProject;
+import org.jvnet.hudson.test.HudsonTestCase;
 
 /**
  * @author Kohsuke Kawaguchi
  */
-public class IntegrationPublisherTest extends HudsonTestCase {
+public class IntegratableProjectTest extends HudsonTestCase {
     public void testConfigRoundtrip1() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
         configRoundtrip(p);
-        assertNull(p.getPublishersList().get(IntegrationPublisher.class));
+        assertNull(p.getProperty(IntegratableProject.class));
     }
 
     public void testConfigRoundtrip2() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
-        p.getPublishersList().add(new IntegrationPublisher());
+        p.addProperty(new IntegratableProject());
         configRoundtrip(p);
-        assertNotNull(p.getPublishersList().get(IntegrationPublisher.class));
+        assertNotNull(p.getProperty(IntegratableProject.class));
     }
 
     private void configRoundtrip(FreeStyleProject p) throws Exception {

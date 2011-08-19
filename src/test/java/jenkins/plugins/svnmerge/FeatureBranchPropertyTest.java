@@ -1,4 +1,4 @@
-package hudson.plugins.svnmerge;
+package jenkins.plugins.svnmerge;
 
 import org.jvnet.hudson.test.HudsonTestCase;
 import hudson.model.FreeStyleProject;

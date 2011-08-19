@@ -1,4 +1,4 @@
-package hudson.plugins.svnmerge;
+package jenkins.plugins.svnmerge;
 
 import hudson.Extension;
 import hudson.MarkupText;
