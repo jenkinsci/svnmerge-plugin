@@ -16,6 +16,7 @@ import org.tmatesoft.svn.core.SVNCommitInfo;
 import static org.tmatesoft.svn.core.SVNDepth.INFINITY;
 import org.tmatesoft.svn.core.SVNException;
 import org.tmatesoft.svn.core.SVNProperties;
+import org.tmatesoft.svn.core.SVNURL;
 import org.tmatesoft.svn.core.io.SVNRepository;
 import org.tmatesoft.svn.core.io.SVNRepositoryFactory;
 import org.tmatesoft.svn.core.wc.SVNClientManager;
@@ -42,6 +43,8 @@ public class MergeTest extends HudsonTestCase {
     private FreeStyleProject trunk;
     private FreeStyleProject p;
     private FeatureBranchProperty upp;
+    private File ws;
+    private SVNClientManager cm;
 
     @Override
     protected void setUp() throws Exception {
@@ -58,6 +61,11 @@ public class MergeTest extends HudsonTestCase {
         p.setScm(new SubversionSCM("file://"+new URL(repo,"branches/b1").getPath(),"b1"));
         upp = new FeatureBranchProperty(trunk.getName());
         p.addProperty(upp);
+
+        // check out workspace so that we can simulate commits outside Jenkins
+        ws = env.temporaryDirectoryAllocator.allocate();
+        cm = SubversionSCM.createSvnClientManager(trunk);
+        cm.getUpdateClient().doCheckout(SVNURL.parseURIDecoded("file://"+repo.getPath()), ws, null, HEAD, INFINITY, true);
     }
 
     /**
@@ -171,7 +179,7 @@ public class MergeTest extends HudsonTestCase {
         System.out.println("-- Now Merging manually");
         IntegrateAction ma = b.getAction(IntegrateAction.class);
         // XXX this can block indefinitely!
-        IntegrateAction.WorkerThread thread = ma.integrateAsync().get();
+        IntegrateAction.WorkerThread thread = ma.performAsync().get();
         String msg = IOUtils.toString(thread.readAll());
         System.out.println(msg);
         return msg;
@@ -201,6 +209,30 @@ public class MergeTest extends HudsonTestCase {
         Desktop.getDesktop().browse(URI.create(new WebClient().getContextPath()));
         new BufferedReader(new InputStreamReader(System.in)).readLine();
     }
+
+    /**
+     * Feature branch should be able to receive changes from the trunk as well as pushing them back into the main in arbitrary numbers and orders.
+     * Make sure it works
+     */
+    public void testReflectiveMerge() throws Exception {
+        commitAndUpdate("trunk/step1");
+        commitAndUpdate("branches/b1/step2");
+
+        // rebase
+//        cm.getDiffClient().doMergeReIntegrate();
+
+        // push changes up
+        p.getPublishersList().add(new IntegrationPublisher());
+        assertBuildStatusSuccess(build());
+    }
+
+    private void commitAndUpdate(String path) throws SVNException {
+        File f = new File(ws, path);
+        cm.getWCClient().doAdd(f,false,false,false, INFINITY,false,false);
+        cm.getCommitClient().doCommit(new File[]{f}, false, "edit", null, null, false, false, INFINITY);
+        cm.getUpdateClient().doUpdate(ws, HEAD, INFINITY, false, true);
+    }
+
 
     /**
      * Add a file and then commit the directory.

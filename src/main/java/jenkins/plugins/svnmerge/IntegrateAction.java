@@ -6,29 +6,16 @@ import hudson.model.AbstractProject;
 import hudson.model.BuildBadgeAction;
 import hudson.model.Fingerprint;
 import hudson.model.Fingerprint.RangeSet;
-import hudson.model.Item;
-import hudson.model.Label;
-import hudson.model.Node;
-import hudson.model.Queue;
 import hudson.model.Queue.Task;
-import hudson.model.ResourceList;
-import hudson.model.TaskAction;
 import hudson.model.TaskListener;
-import hudson.model.TaskThread;
-import hudson.model.queue.AbstractQueueTask;
-import hudson.model.queue.CauseOfBlockage;
-import hudson.remoting.AsyncFutureImpl;
 import hudson.scm.ChangeLogSet.Entry;
 import hudson.scm.SubversionChangeLogSet.LogEntry;
 import hudson.scm.SubversionSCM.SvnInfo;
 import hudson.scm.SubversionTagAction;
 import hudson.security.ACL;
-import hudson.security.Permission;
 import jenkins.model.Jenkins;
-import org.acegisecurity.AccessDeniedException;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
-import org.kohsuke.stapler.framework.io.LargeText;
 
 import javax.servlet.ServletException;
 import java.io.File;
@@ -36,7 +23,6 @@ import java.io.IOException;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Future;
 
 /**
  * {@link AbstractBuild}-level action to integrate
@@ -44,7 +30,7 @@ import java.util.concurrent.Future;
  *
  * @author Kohsuke Kawaguchi
  */
-public class IntegrateAction extends TaskAction implements BuildBadgeAction {
+public class IntegrateAction extends AbstractSvnmergeTaskAction implements BuildBadgeAction {
     public final AbstractBuild<?,?> build;
 
     /**
@@ -71,8 +57,9 @@ public class IntegrateAction extends TaskAction implements BuildBadgeAction {
         return "integrate-branch";
     }
 
-    protected Permission getPermission() {
-        return Item.CONFIGURE;
+    @Override
+    public AbstractProject<?, ?> getProject() {
+        return build.getProject();
     }
 
     protected ACL getACL() {
@@ -87,10 +74,6 @@ public class IntegrateAction extends TaskAction implements BuildBadgeAction {
         return getSvnInfo()!=null && getProperty()!=null;
     }
 
-    public FeatureBranchProperty getProperty() {
-        return build.getProject().getProperty(FeatureBranchProperty.class);
-    }
-
     public boolean isIntegrated() {
         return integratedRevision!=null && integratedRevision>=0;
     }
@@ -103,13 +86,13 @@ public class IntegrateAction extends TaskAction implements BuildBadgeAction {
         return integratedRevision;
     }
 
-    @Override
-    public LargeText getLog() {
-        return new LargeText(getLogFile(),workerThread==null);
+    protected File getLogFile() {
+        return new File(build.getRootDir(),"integrate.log");
     }
 
-    private File getLogFile() {
-        return new File(build.getRootDir(),"integrate.log");
+    @Override
+    protected TaskImpl createTask() throws IOException {
+        return new IntegrationTask();
     }
 
     /**
@@ -128,7 +111,7 @@ public class IntegrateAction extends TaskAction implements BuildBadgeAction {
      * <p>
      * This requires that the calling thread owns the workspace.
      */
-    /*package*/ long integrate(TaskListener listener) throws IOException, InterruptedException {
+    /*package*/ long perform(TaskListener listener) throws IOException, InterruptedException {
         SvnInfo si = getSvnInfo();
         String commitMessage = getCommitMessage();
         integratedRevision = getProperty().integrate(listener, si.url, si.revision, commitMessage);
@@ -183,28 +166,6 @@ public class IntegrateAction extends TaskAction implements BuildBadgeAction {
     }
 
     /**
-     * Schedules the integration of this branch to the upstream.
-     *
-     * <p>
-     * This happens asynchronously.
-     */
-    public Future<WorkerThread> integrateAsync() throws IOException {
-        getACL().checkPermission(getPermission());
-        IntegrateAction.IntegrationTask task = new IntegrationTask();
-        Jenkins.getInstance().getQueue().add(task, 0);
-        return task.future;
-    }
-
-    public synchronized void doIntegrate(StaplerResponse rsp) throws IOException, ServletException {
-        integrateAsync();
-        rsp.sendRedirect(".");
-    }
-
-    public void doIndex(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
-        req.getView(this, decidePage()).forward(req,rsp);
-    }
-
-    /**
      * Cancels an integration task in the queue, if any.
      */
     public void doCancelQueue(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
@@ -216,54 +177,17 @@ public class IntegrateAction extends TaskAction implements BuildBadgeAction {
     /**
      * Which page to render?
      */
-    private String decidePage() {
+    protected String decidePage() {
         if(isIntegrated())          return "completed.jelly";
         if (workerThread != null)   return "inProgress.jelly";
         return "form.jelly";
     }
 
-    public final class WorkerThread extends TaskThread {
-        public WorkerThread() throws IOException {
-            super(IntegrateAction.this, ListenerAndText.forFile(getLogFile(),IntegrateAction.this));
-            associateWith(IntegrateAction.this);
-        }
-
-        protected void perform(TaskListener listener) throws Exception {
-            integrate(listener);
-        }
-    }
-
     /**
      * {@link Task} that performs the integration.
      */
-    private class IntegrationTask extends AbstractQueueTask {
-        private final AsyncFutureImpl<WorkerThread> future = new AsyncFutureImpl<WorkerThread>();
-        private final WorkerThread thread;
-
-        public IntegrationTask() throws IOException {
-            // do this now so that this gets tied with the action.
-            thread = new WorkerThread();
-        }
-
-        public boolean isConcurrentBuild() {
-            return false;
-        }
-
-        public CauseOfBlockage getCauseOfBlockage() {
-            return null;
-        }
-
-        public Object getSameNodeConstraint() {
-            return null;
-        }
-
-        /**
-         * This has to run on the last workspace.
-         */
-        @Override
-        public Label getAssignedLabel() {
-            Node node = getLastBuiltOn();
-            return node != null ? node.getSelfLabel() : null;
+    private class IntegrationTask extends TaskImpl {
+        private IntegrationTask() throws IOException {
         }
 
         @Override
@@ -272,102 +196,14 @@ public class IntegrateAction extends TaskAction implements BuildBadgeAction {
         }
 
         @Override
-        public long getEstimatedDuration() {
-            return -1;
-        }
-
-        @Override
-        public Queue.Executable createExecutable() throws IOException {
-            return new Queue.Executable() {
-                public Queue.Task getParent() {
-                    return IntegrationTask.this;
-                }
-
-                public long getEstimatedDuration() {
-                    return IntegrationTask.this.getEstimatedDuration();
-                }
-
-                public void run() {
-                    // run this synchronously
-                    try {
-                        thread.run();
-                    } finally {
-                        future.set(thread);
-                    }
-                }
-            };
-        }
-
-        @Override
         public String getDisplayName() {
             return getProject().getDisplayName()+" Integration";
-        }
-
-        /**
-         * Exclusive access to the workspace required.
-         */
-        @Override
-        public ResourceList getResourceList() {
-            return new ResourceList().w(getProject().getWorkspaceResource());
-        }
-
-        private AbstractProject<?,?> getProject() {
-            return build.getProject();
-        }
-
-        @Override
-        public int hashCode() {
-            return getProject().hashCode();
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj instanceof IntegrationTask) {
-                IntegrationTask that = (IntegrationTask) obj;
-                return this.getProject()==that.getProject();
-            }
-            return false;
-        }
-
-        public String getUrl() {
-            return getProject().getUrl()+getUrlName();
-        }
-
-        public void doCancelQueue(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
-            IntegrateAction.this.doCancelQueue(req,rsp);
-        }
-
-        public Node getLastBuiltOn() {
-            return null;
-        }
-
-        public boolean isBuildBlocked() {
-            return false;
-        }
-
-        public String getWhyBlocked() {
-            return null;
-        }
-
-        public String getName() {
-            return getDisplayName();
-        }
-
-        public void checkAbortPermission() {
-            if (!hasAbortPermission()) {
-                throw new AccessDeniedException("???");
-            }
-        }
-
-        public boolean hasAbortPermission() {
-            // XXX Jenkins.getInstance().getAuthorizationStrategy().getACL(...).hasPermission(...)
-            return true;
         }
     }
 
     /**
      * Checks if the given {@link Entry} represents a commit from
-     * {@linkplain #integrate(TaskListener) integration}. If so,
+     * {@linkplain #perform(TaskListener) integration}. If so,
      * return its fingerprint.
      *
      * Otherwise null.

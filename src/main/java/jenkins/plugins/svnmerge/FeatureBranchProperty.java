@@ -4,6 +4,7 @@ import hudson.Extension;
 import hudson.FilePath.FileCallable;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
+import hudson.model.Action;
 import hudson.model.BuildListener;
 import hudson.model.Item;
 import hudson.model.JobProperty;
@@ -105,8 +106,10 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
     }
 
     @Override
-    public IntegrationStatusAction getJobAction(AbstractProject<?,?> _) {
-        return new IntegrationStatusAction(this);
+    public List<Action> getJobActions(AbstractProject<?,?> project) {
+        return Arrays.asList(
+            new IntegrationStatusAction(this),
+            new RebaseAction(project));
     }
 
     /**
@@ -137,7 +140,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
      *      -1 if it failed and the failure was handled gracefully
      *      (typically this means a merge conflict.)
      */
-    public long rebase(final TaskListener listener, final long upstreamRev, final String commitMessage) throws IOException, InterruptedException {
+    public long rebase(final TaskListener listener, final long upstreamRev) throws IOException, InterruptedException {
         final ISVNAuthenticationProvider provider = Jenkins.getInstance().getDescriptorByType(
                 SubversionSCM.DescriptorImpl.class).createAuthenticationProvider();
         return owner.getModuleRoot().act(new FileCallable<Long>() {
@@ -176,7 +179,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
                     } else {
                         logger.println("Committing changes");
                         SVNCommitClient cc = cm.getCommitClient();
-                        SVNCommitInfo ci = cc.doCommit(new File[]{mr}, false, commitMessage, null, null, false, false, INFINITY);
+                        SVNCommitInfo ci = cc.doCommit(new File[]{mr}, false, "Rebasing from "+up, null, null, false, false, INFINITY);
                         if(ci.getNewRevision()<0) {
                             logger.println("  No changes since the last integration");
                             return 0L;

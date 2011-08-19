@@ -43,7 +43,7 @@ public class IntegrationPublisher extends Publisher {
             return false;
         }
         
-        if(ia.integrate(listener)<0)
+        if(ia.perform(listener)<0)
             build.setResult(Result.FAILURE);
         return true;
     }

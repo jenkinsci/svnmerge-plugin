@@ -16,6 +16,8 @@ import net.sf.json.JSONObject;
 import org.kohsuke.stapler.StaplerRequest;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * {@link JobProperty} that marks projects that accept feature branch
@@ -25,8 +27,8 @@ import java.io.IOException;
  */
 public class IntegratableProject extends JobProperty<AbstractProject<?,?>> {
     @Override
-    public Action getJobAction(AbstractProject<?,?> _) {
-        return new IntegratableProjectAction(this);
+    public List<Action> getJobActions(AbstractProject<?,?> _) {
+        return Collections.<Action>singletonList(new IntegratableProjectAction(this));
     }
 
     /**
