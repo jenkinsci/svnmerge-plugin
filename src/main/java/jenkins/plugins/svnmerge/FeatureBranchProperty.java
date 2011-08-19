@@ -61,6 +61,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
      * Upstream job name.
      */
     private String upstream;
+    private transient RebaseAction rebaseAction;
 
     @DataBoundConstructor
     public FeatureBranchProperty(String upstream) {
@@ -107,9 +108,9 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
 
     @Override
     public List<Action> getJobActions(AbstractProject<?,?> project) {
-        return Arrays.asList(
-            new IntegrationStatusAction(this),
-            new RebaseAction(project));
+        if (rebaseAction==null)
+            rebaseAction = new RebaseAction(project);
+        return Arrays.asList(new IntegrationStatusAction(this), rebaseAction);
     }
 
     /**
