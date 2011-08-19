@@ -7,6 +7,7 @@ import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.tasks.BuildStepDescriptor;
+import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Publisher;
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -20,6 +21,14 @@ import java.io.IOException;
 public class IntegrationPublisher extends Publisher {
     @DataBoundConstructor
     public IntegrationPublisher() {
+    }
+
+    /**
+     * Running multiple merge concurrently is only going to result in conflicts, so no point in doing that.
+     * So request that we run this step from different builds sequentially
+     */
+    public BuildStepMonitor getRequiredMonitorService() {
+        return BuildStepMonitor.STEP;
     }
 
     @Override

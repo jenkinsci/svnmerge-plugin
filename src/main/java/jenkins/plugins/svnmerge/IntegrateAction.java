@@ -15,6 +15,9 @@ import hudson.model.ResourceList;
 import hudson.model.TaskAction;
 import hudson.model.TaskListener;
 import hudson.model.TaskThread;
+import hudson.model.queue.AbstractQueueTask;
+import hudson.model.queue.CauseOfBlockage;
+import hudson.model.queue.SubTask;
 import hudson.remoting.AsyncFutureImpl;
 import hudson.scm.ChangeLogSet.Entry;
 import hudson.scm.SubversionChangeLogSet.LogEntry;
@@ -29,6 +32,7 @@ import org.kohsuke.stapler.framework.io.LargeText;
 import javax.servlet.ServletException;
 import java.io.File;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
@@ -233,13 +237,25 @@ public class IntegrateAction extends TaskAction implements BuildBadgeAction {
     /**
      * {@link Task} that performs the integration.
      */
-    private class IntegrationTask implements Queue.Task {
+    private class IntegrationTask extends AbstractQueueTask {
         private final AsyncFutureImpl<WorkerThread> future = new AsyncFutureImpl<WorkerThread>();
         private final WorkerThread thread;
 
         public IntegrationTask() throws IOException {
             // do this now so that this gets tied with the action.
             thread = new WorkerThread();
+        }
+
+        public boolean isConcurrentBuild() {
+            return false;
+        }
+
+        public CauseOfBlockage getCauseOfBlockage() {
+            return null;
+        }
+
+        public Object getSameNodeConstraint() {
+            return null;
         }
 
         /**
