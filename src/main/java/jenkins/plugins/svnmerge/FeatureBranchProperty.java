@@ -118,6 +118,79 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
         return true;
     }
 
+    /**
+     * Integrates changes made in the upstream into the branch at the workspace.
+     *
+     * <p>
+     * This computation uses the workspace of the project. First, we update the workspace
+     * to the tip of the branch (or else the commit will fail later), merge the changes
+     * from the upstream, then commit it. If the merge fails, we'll revert the workspace
+     * so that the next build can go smoothly.
+     *
+     * @param listener
+     *      Where the progress is sent.
+     * @param upstreamRev
+     *      Revision of the branch to be integrated to the upstream.
+     *      If -1, use the latest.
+     * @return
+     *      the new revision number if the rebase was successful.
+     *      -1 if it failed and the failure was handled gracefully
+     *      (typically this means a merge conflict.)
+     */
+    public long rebase(final TaskListener listener, final long upstreamRev, final String commitMessage) throws IOException, InterruptedException {
+        final ISVNAuthenticationProvider provider = Jenkins.getInstance().getDescriptorByType(
+                SubversionSCM.DescriptorImpl.class).createAuthenticationProvider();
+        return owner.getModuleRoot().act(new FileCallable<Long>() {
+            public Long invoke(File mr, VirtualChannel virtualChannel) throws IOException {
+                try {
+                    final PrintStream logger = listener.getLogger();
+                    final boolean[] foundConflict = new boolean[1];
+                    ISVNEventHandler printHandler = new SubversionEventHandlerImpl(logger,mr) {
+                        @Override
+                        public void handleEvent(SVNEvent event, double progress) throws SVNException {
+                            super.handleEvent(event, progress);
+                            if(event.getContentsStatus()== SVNStatusType.CONFLICTED)
+                                foundConflict[0] = true;
+                        }
+                    };
+
+                    SVNURL up = getUpstreamURL();
+                    SVNClientManager cm = SubversionSCM.createSvnClientManager(provider);
+                    cm.setEventHandler(printHandler);
+
+                    SVNWCClient wc = cm.getWCClient();
+                    SVNDiffClient dc = cm.getDiffClient();
+
+                    logger.printf("Updating workspace to the latest revision\n");
+                    long wsr = cm.getUpdateClient().doUpdate(mr, HEAD, INFINITY, false, false);
+                    logger.printf("  Updated to rev.%d\n",wsr);
+
+                    SVNRevision mergeRev = upstreamRev >= 0 ? SVNRevision.create(upstreamRev) : HEAD;
+
+                    logger.printf("Merging change from the upstream %s\n",up);
+                    dc.doMergeReIntegrate(up, mergeRev, mr, false);
+                    if(foundConflict[0]) {
+                        logger.println("Found conflict. Reverting this failed merge");
+                        wc.doRevert(new File[]{mr},INFINITY, null);
+                        return -1L;
+                    } else {
+                        logger.println("Committing changes");
+                        SVNCommitClient cc = cm.getCommitClient();
+                        SVNCommitInfo ci = cc.doCommit(new File[]{mr}, false, commitMessage, null, null, false, false, INFINITY);
+                        if(ci.getNewRevision()<0) {
+                            logger.println("  No changes since the last integration");
+                            return 0L;
+                        } else {
+                            logger.println("  committed revision "+ci.getNewRevision());
+                            return ci.getNewRevision();
+                        }
+                    }
+                } catch (SVNException e) {
+                    throw new IOException2("Failed to merge", e);
+                }
+            }
+        });
+    }
 
     /**
      * Perform a merge to the upstream that integrates changes in this branch.
