@@ -284,6 +284,10 @@ public class IntegrateAction extends TaskAction implements BuildBadgeAction {
                     return IntegrationTask.this;
                 }
 
+                public long getEstimatedDuration() {
+                    return IntegrationTask.this.getEstimatedDuration();
+                }
+
                 public void run() {
                     // run this synchronously
                     try {

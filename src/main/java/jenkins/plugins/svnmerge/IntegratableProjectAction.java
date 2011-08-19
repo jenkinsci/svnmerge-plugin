@@ -8,6 +8,7 @@ import hudson.model.Action;
 import hudson.model.Hudson;
 import hudson.scm.SCM;
 import hudson.scm.SubversionSCM;
+import hudson.scm.SubversionSCM.ModuleLocation;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
@@ -21,6 +22,7 @@ import org.tmatesoft.svn.core.wc.SVNRevision;
 import javax.servlet.ServletException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -100,7 +102,7 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         url = url.substring(0,m.start())+"/branches/"+name;
 
         if(!attach) {
-            SVNClientManager svnm = SubversionSCM.createSvnClientManager();
+            SVNClientManager svnm = SubversionSCM.createSvnClientManager(project);
             try {
                 SVNURL dst = SVNURL.parseURIEncoded(url);
 
@@ -138,7 +140,16 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
             ((AbstractProject)copy).addProperty(new FeatureBranchProperty(project.getName())); // pointless cast for working around javac bug as of JDK1.6.0_02
             // update the SCM config to point to the branch
             SubversionSCM svnScm = (SubversionSCM)copy.getScm();
-            copy.setScm(new SubversionSCM(new String[]{url},new String[]{null},svnScm.isUseUpdate(),svnScm.getBrowser()));
+            copy.setScm(
+                    new SubversionSCM(
+                            Arrays.asList(new ModuleLocation(url,null)),
+                                svnScm.getWorkspaceUpdater(), svnScm.getBrowser(),
+                                svnScm.getExcludedRegions(),
+                                svnScm.getExcludedUsers(),
+                                svnScm.getExcludedRevprop(),
+                                svnScm.getExcludedCommitMessages(),
+                                svnScm.getIncludedRegions()
+                            ));
         } finally {
             bc.commit();
         }

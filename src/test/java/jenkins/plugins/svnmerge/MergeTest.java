@@ -207,7 +207,7 @@ public class MergeTest extends HudsonTestCase {
      */
     private void commitAndUpdate(BuildListener listener, FilePath dir, FilePath newFile) throws IOException2 {
         try {
-            SVNClientManager cm = SubversionSCM.createSvnClientManager();
+            SVNClientManager cm = SubversionSCM.createSvnClientManager(p);
 
             cm.getWCClient().doAdd(toFile(newFile),false,false,false, INFINITY,false,false);
             SVNCommitInfo ci = cm.getCommitClient().doCommit(new File[]{toFile(dir)}, false, "a change in a branch", null, null, false, false, INFINITY);
