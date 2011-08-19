@@ -10,6 +10,7 @@ import hudson.model.Item;
 import hudson.model.Label;
 import hudson.model.Node;
 import hudson.model.Queue;
+import hudson.model.Queue.Task;
 import hudson.model.ResourceList;
 import hudson.model.TaskAction;
 import hudson.model.TaskListener;
@@ -223,7 +224,7 @@ public class IntegrateAction extends TaskAction implements BuildBadgeAction {
 
     public final class WorkerThread extends TaskThread {
         public WorkerThread() throws IOException {
-            super(IntegrateAction.this, ListenerAndText.forFile(getLogFile()));
+            super(IntegrateAction.this, ListenerAndText.forFile(getLogFile(),IntegrateAction.this));
             associateWith(IntegrateAction.this);
         }
 
