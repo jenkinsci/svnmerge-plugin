@@ -167,11 +167,11 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
 
                     logger.printf("Updating workspace to the latest revision\n");
                     long wsr = cm.getUpdateClient().doUpdate(mr, HEAD, INFINITY, false, false);
-                    logger.printf("  Updated to rev.%d\n",wsr);
+//                    logger.printf("  Updated to rev.%d\n",wsr);  // reported by printHandler
 
-                    SVNRevision mergeRev = upstreamRev >= 0 ? SVNRevision.create(upstreamRev) : HEAD;
+                    SVNRevision mergeRev = upstreamRev >= 0 ? SVNRevision.create(upstreamRev) : cm.getWCClient().doInfo(up,HEAD,HEAD).getCommittedRevision();
 
-                    logger.printf("Merging change from the upstream %s\n",up);
+                    logger.printf("Merging change from the upstream %s at rev.%s\n",up,mergeRev);
                     dc.doMergeReIntegrate(up, mergeRev, mr, false);
                     if(foundConflict[0]) {
                         logger.println("Found conflict. Reverting this failed merge");
@@ -180,9 +180,9 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
                     } else {
                         logger.println("Committing changes");
                         SVNCommitClient cc = cm.getCommitClient();
-                        SVNCommitInfo ci = cc.doCommit(new File[]{mr}, false, "Rebasing from "+up, null, null, false, false, INFINITY);
+                        SVNCommitInfo ci = cc.doCommit(new File[]{mr}, false, "Rebasing from "+up+"@"+mergeRev, null, null, false, false, INFINITY);
                         if(ci.getNewRevision()<0) {
-                            logger.println("  No changes since the last integration");
+                            logger.println("  No changes since the last rebase");
                             return 0L;
                         } else {
                             logger.println("  committed revision "+ci.getNewRevision());
