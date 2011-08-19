@@ -108,7 +108,7 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
 
                 // check if the branch already exists
                 try {
-                    SVNInfo info = svnm.getWCClient().doInfo(dst, null, null);
+                    SVNInfo info = svnm.getWCClient().doInfo(dst, SVNRevision.HEAD, SVNRevision.HEAD);
                     if(info.getKind()== SVNNodeKind.DIR) {
                         // ask the user if we should attach
                         req.getView(this,"_attach.jelly").forward(req,rsp);
