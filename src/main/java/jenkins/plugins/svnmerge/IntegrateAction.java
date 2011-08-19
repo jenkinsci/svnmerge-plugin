@@ -6,7 +6,6 @@ import hudson.model.AbstractProject;
 import hudson.model.BuildBadgeAction;
 import hudson.model.Fingerprint;
 import hudson.model.Fingerprint.RangeSet;
-import hudson.model.Hudson;
 import hudson.model.Item;
 import hudson.model.Label;
 import hudson.model.Node;
@@ -17,7 +16,6 @@ import hudson.model.TaskListener;
 import hudson.model.TaskThread;
 import hudson.model.queue.AbstractQueueTask;
 import hudson.model.queue.CauseOfBlockage;
-import hudson.model.queue.SubTask;
 import hudson.remoting.AsyncFutureImpl;
 import hudson.scm.ChangeLogSet.Entry;
 import hudson.scm.SubversionChangeLogSet.LogEntry;
@@ -25,6 +23,8 @@ import hudson.scm.SubversionSCM.SvnInfo;
 import hudson.scm.SubversionTagAction;
 import hudson.security.ACL;
 import hudson.security.Permission;
+import jenkins.model.Jenkins;
+import org.acegisecurity.AccessDeniedException;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 import org.kohsuke.stapler.framework.io.LargeText;
@@ -32,12 +32,10 @@ import org.kohsuke.stapler.framework.io.LargeText;
 import javax.servlet.ServletException;
 import java.io.File;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
-import org.acegisecurity.AccessDeniedException;
 
 /**
  * {@link AbstractBuild}-level action to integrate
@@ -136,7 +134,7 @@ public class IntegrateAction extends TaskAction implements BuildBadgeAction {
         if(integratedRevision>0) {
             // record this integration as a fingerprint.
             // this will allow us to find where this change is integrated.
-            Hudson.getInstance().getFingerprintMap().getOrCreate(
+            Jenkins.getInstance().getFingerprintMap().getOrCreate(
                     build, IntegrateAction.class.getName(),
                     getFingerprintKey());
         }
@@ -155,7 +153,7 @@ public class IntegrateAction extends TaskAction implements BuildBadgeAction {
      *      if not integrated yet or this information is lost.
      */
     public int getUpstreamBuildNumber() throws IOException {
-        Fingerprint f = Hudson.getInstance().getFingerprintMap().get(getFingerprintKey());
+        Fingerprint f = Jenkins.getInstance().getFingerprintMap().get(getFingerprintKey());
         if(f==null)         return -1;
         FeatureBranchProperty p = getProperty();
         RangeSet rs = new RangeSet(); // empty range set
@@ -192,7 +190,7 @@ public class IntegrateAction extends TaskAction implements BuildBadgeAction {
     public Future<WorkerThread> integrateAsync() throws IOException {
         getACL().checkPermission(getPermission());
         IntegrateAction.IntegrationTask task = new IntegrationTask();
-        Hudson.getInstance().getQueue().add(task, 0);
+        Jenkins.getInstance().getQueue().add(task, 0);
         return task.future;
     }
 
@@ -210,7 +208,7 @@ public class IntegrateAction extends TaskAction implements BuildBadgeAction {
      */
     public void doCancelQueue(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
         build.getProject().checkPermission(AbstractProject.BUILD);
-        Hudson.getInstance().getQueue().cancel(new IntegrationTask());
+        Jenkins.getInstance().getQueue().cancel(new IntegrationTask());
         rsp.forwardToPreviousPage(req);
     }
 
@@ -361,7 +359,7 @@ public class IntegrateAction extends TaskAction implements BuildBadgeAction {
         }
 
         public boolean hasAbortPermission() {
-            // XXX Hudson.getInstance().getAuthorizationStrategy().getACL(...).hasPermission(...)
+            // XXX Jenkins.getInstance().getAuthorizationStrategy().getACL(...).hasPermission(...)
             return true;
         }
     }
@@ -379,7 +377,7 @@ public class IntegrateAction extends TaskAction implements BuildBadgeAction {
             String msg = changeEntry.getMsg().trim();
             if(msg.startsWith(COMMIT_MESSAGE_PREFIX) && msg.endsWith(COMMIT_MESSAGE_SUFFIX)) {
                 // this build is merging an integration. Leave this in the record
-                return Hudson.getInstance().getFingerprintMap().get(Util.getDigestOf(msg + "#" + le.getRevision()));
+                return Jenkins.getInstance().getFingerprintMap().get(Util.getDigestOf(msg + "#" + le.getRevision()));
             }
         }
         return null;
@@ -387,5 +385,5 @@ public class IntegrateAction extends TaskAction implements BuildBadgeAction {
 
     // used to find integration commits
     static final String COMMIT_MESSAGE_PREFIX = "Integrated ";
-    static final String COMMIT_MESSAGE_SUFFIX = " (from Hudson)";
+    static final String COMMIT_MESSAGE_SUFFIX = " (from Jenkins)";
 }

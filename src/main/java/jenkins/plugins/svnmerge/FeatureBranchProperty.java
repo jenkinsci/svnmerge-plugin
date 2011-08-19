@@ -5,7 +5,6 @@ import hudson.FilePath.FileCallable;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
-import hudson.model.Hudson;
 import hudson.model.Item;
 import hudson.model.JobProperty;
 import hudson.model.JobPropertyDescriptor;
@@ -17,11 +16,11 @@ import hudson.scm.SubversionEventHandlerImpl;
 import hudson.scm.SubversionSCM;
 import hudson.scm.SubversionSCM.ModuleLocation;
 import hudson.util.IOException2;
+import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.tmatesoft.svn.core.SVNCommitInfo;
-import static org.tmatesoft.svn.core.SVNDepth.INFINITY;
 import org.tmatesoft.svn.core.SVNException;
 import org.tmatesoft.svn.core.SVNURL;
 import org.tmatesoft.svn.core.auth.ISVNAuthenticationProvider;
@@ -32,7 +31,6 @@ import org.tmatesoft.svn.core.wc.SVNDiffClient;
 import org.tmatesoft.svn.core.wc.SVNEvent;
 import org.tmatesoft.svn.core.wc.SVNInfo;
 import org.tmatesoft.svn.core.wc.SVNRevision;
-import static org.tmatesoft.svn.core.wc.SVNRevision.HEAD;
 import org.tmatesoft.svn.core.wc.SVNStatusType;
 import org.tmatesoft.svn.core.wc.SVNUpdateClient;
 import org.tmatesoft.svn.core.wc.SVNWCClient;
@@ -44,6 +42,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static org.tmatesoft.svn.core.SVNDepth.*;
+import static org.tmatesoft.svn.core.wc.SVNRevision.*;
 
 /**
  * {@link JobProperty} for feature branch projects.
@@ -74,7 +75,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
      * Gets the upstream project, or null if no such project was found.
      */
     public AbstractProject<?,?> getUpstreamProject() {
-        return Hudson.getInstance().getItemByFullName(upstream,AbstractProject.class);
+        return Jenkins.getInstance().getItemByFullName(upstream,AbstractProject.class);
     }
 
     public ModuleLocation getUpstreamSubversionLocation() {
@@ -134,7 +135,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
      *      (typically this means a merge conflict.) 
      */
     public long integrate(final TaskListener listener, final String branchURL, final long branchRev, final String commitMessage) throws IOException, InterruptedException {
-        final ISVNAuthenticationProvider provider = Hudson.getInstance().getDescriptorByType(
+        final ISVNAuthenticationProvider provider = Jenkins.getInstance().getDescriptorByType(
                 SubversionSCM.DescriptorImpl.class).createAuthenticationProvider();
         return owner.getModuleRoot().act(new FileCallable<Long>() {
             public Long invoke(File mr, VirtualChannel virtualChannel) throws IOException {
@@ -212,7 +213,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
                 AbstractProject<?,?> up = (AbstractProject) item;
                 if(up.getProperty(IntegratableProject.class)!=null) {
                     try {
-                        for (AbstractProject<?,?> p : Hudson.getInstance().getItems(AbstractProject.class)) {
+                        for (AbstractProject<?,?> p : Jenkins.getInstance().getItems(AbstractProject.class)) {
                             FeatureBranchProperty fbp = p.getProperty(FeatureBranchProperty.class);
                             if(fbp!=null) {
                                 if(fbp.upstream.equals(oldName)) {
@@ -244,7 +245,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
 
         public List<AbstractProject<?,?>> listIntegratableProjects() {
             List<AbstractProject<?,?>> r = new ArrayList<AbstractProject<?,?>>();
-            for(AbstractProject<?,?> p : Hudson.getInstance().getItems(AbstractProject.class))
+            for(AbstractProject<?,?> p : Jenkins.getInstance().getItems(AbstractProject.class))
                 if(p.getProperty(IntegratableProject.class)!=null)
                     r.add(p);
             return r;

@@ -5,10 +5,10 @@ import hudson.Util;
 import hudson.model.AbstractModelObject;
 import hudson.model.AbstractProject;
 import hudson.model.Action;
-import hudson.model.Hudson;
 import hudson.scm.SCM;
 import hudson.scm.SubversionSCM;
 import hudson.scm.SubversionSCM.ModuleLocation;
+import jenkins.model.Jenkins;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
@@ -67,7 +67,7 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
     public List<AbstractProject<?,?>> getBranches() {
         String n = project.getName();
         List<AbstractProject<?,?>> r  = new ArrayList<AbstractProject<?,?>>();
-        for (AbstractProject<?,?> p : Hudson.getInstance().getItems(AbstractProject.class)) {
+        for (AbstractProject<?,?> p : Jenkins.getInstance().getItems(AbstractProject.class)) {
             FeatureBranchProperty fbp = p.getProperty(FeatureBranchProperty.class);
             if(fbp!=null && fbp.getUpstream().equals(n))
                 r.add(p);
@@ -125,7 +125,7 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
                 svnm.getCopyClient().doCopy(
                     svn.getLocations()[0].getSVNURL(), SVNRevision.HEAD,
                     dst, false, true,
-                    "Created a feature branch from Hudson");
+                    "Created a feature branch from Jenkins");
             } catch (SVNException e) {
                 sendError(e);
                 return;
@@ -133,7 +133,7 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         }
 
         // copy a job, and adjust its properties for integration
-        AbstractProject<?,?> copy = Hudson.getInstance().copy(project, project.getName() + "-" + name);
+        AbstractProject<?,?> copy = Jenkins.getInstance().copy(project, project.getName() + "-" + name);
         BulkChange bc = new BulkChange(copy);
         try {
             copy.removeProperty(IntegratableProject.class);
