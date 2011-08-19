@@ -28,7 +28,10 @@ import java.util.concurrent.Future;
 /**
  * @author Kohsuke Kawaguchi
  */
-abstract class AbstractSvnmergeTaskAction extends TaskAction {
+public abstract class AbstractSvnmergeTaskAction extends TaskAction {
+    /*package*/ AbstractSvnmergeTaskAction() { // subtyping only allowed for this plugin
+    }
+
     protected Permission getPermission() {
         return Item.CONFIGURE;
     }
@@ -44,7 +47,7 @@ abstract class AbstractSvnmergeTaskAction extends TaskAction {
         return new LargeText(getLogFile(),workerThread==null);
     }
 
-    protected abstract File getLogFile();
+    public abstract File getLogFile();
 
     public void doIndex(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
         req.getView(this, decidePage()).forward(req,rsp);
