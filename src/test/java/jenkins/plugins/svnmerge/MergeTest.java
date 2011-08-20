@@ -271,6 +271,41 @@ public class MergeTest extends HudsonTestCase {
     }
 
     private URL loadSvn() throws Exception {
+        /*  Contents of this repository
+------------------------------------------------------------------------
+r4 | kohsuke | 2009-01-16 16:15:32 -0800 (Fri, 16 Jan 2009) | 1 line
+Changed paths:
+   A /trunk/d
+
+trunk is moving ahead after branched b1
+------------------------------------------------------------------------
+r3 | kohsuke | 2009-01-16 16:15:12 -0800 (Fri, 16 Jan 2009) | 2 lines
+Changed paths:
+   A /branches/b1 (from /trunk:1)
+   A /branches/b1/a (from /trunk/a:2)
+   A /branches/b1/b (from /trunk/b:2)
+   A /branches/b1/c (from /trunk/c:2)
+
+Branched
+
+------------------------------------------------------------------------
+r2 | kohsuke | 2009-01-16 16:14:42 -0800 (Fri, 16 Jan 2009) | 1 line
+Changed paths:
+   A /trunk/a
+   A /trunk/b
+   A /trunk/c
+
+trunk version
+------------------------------------------------------------------------
+r1 | kohsuke | 2009-01-16 16:14:17 -0800 (Fri, 16 Jan 2009) | 1 line
+Changed paths:
+   A /branches
+   A /trunk
+
+created a structure
+------------------------------------------------------------------------
+
+         */
         return new CopyExisting(getClass().getResource("repo.zip")).allocate().toURI().toURL();
     }
 
