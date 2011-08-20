@@ -25,7 +25,7 @@ public class RebaseBuilder extends Builder {
     }
 
     @Extension
-    public class DescriptorImpl extends BuildStepDescriptor<Builder> {
+    public static class DescriptorImpl extends BuildStepDescriptor<Builder> {
         @Override
         public boolean isApplicable(Class<? extends AbstractProject> jobType) {
             return true;
