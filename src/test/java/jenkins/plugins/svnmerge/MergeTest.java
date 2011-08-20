@@ -9,6 +9,7 @@ import hudson.model.FreeStyleProject;
 import hudson.model.Result;
 import hudson.scm.SubversionSCM;
 import hudson.util.IOException2;
+import org.apache.commons.io.FileUtils;
 import org.jvnet.hudson.test.HudsonHomeLoader.CopyExisting;
 import org.jvnet.hudson.test.HudsonTestCase;
 import org.jvnet.hudson.test.TestBuilder;
@@ -108,16 +109,11 @@ public class MergeTest extends HudsonTestCase {
      * Very basic test that pushes changes to the upstream.
      */
     public void testUpstreamMerge() throws Exception {
+        commitAndUpdate("branches/b1/e");   // make a non-conflicting change in the branch
+
         p.addPublisher(new IntegrationPublisher());
-        p.getBuildersList().add(nonCollidingChange);
         assertBuildStatusSuccess(build());
 
-        // we make a commit in the builder, which won't be picked up by the integration
-        // (since it's keyed to the state of the repository as of a check out.)
-        // so this one pushes the non-colliding change to the trunk.
-        p.getBuildersList().clear();
-        assertBuildStatusSuccess(build());
-        
         assertTrue(trunkHasE());
     }
 
@@ -139,12 +135,9 @@ public class MergeTest extends HudsonTestCase {
      * Now what if a merge fails with a conflict?
      */
     public void testUpstreamConflict() throws Exception {
-        p.addPublisher(new IntegrationPublisher());
-        p.getBuildersList().add(collidingChange);
+        commitAndUpdate("branches/b1/d");   // make a conflicting change in the branch
 
-        // this should succeed. see testUpstreamMerge for why.
-        assertBuildStatusSuccess(build());
-        p.getBuildersList().clear();
+        p.addPublisher(new IntegrationPublisher());
 
         // merge should have failed, because of a conflict
         FreeStyleBuild build = build();
@@ -153,16 +146,17 @@ public class MergeTest extends HudsonTestCase {
 
         // workspace should have our d.
         assertEquals(MAGIC_CONTENT,IOUtils.toString(p.getModuleRoot().child("d").read()));
-
     }
 
     /**
      * Tests manual integration.
      */
     public void testManualIntegration() throws Exception {
-        // make a change in the branch, but don't auto-commit the change
-        p.getBuildersList().add(nonCollidingChange);
         FreeStyleBuild b = assertBuildStatusSuccess(build());
+
+        commitAndUpdate("branches/b1/e");   // make a non-conflicting change in the branch
+
+        // make a change in the branch, but don't auto-commit the change
         integrateManually(b);
 
         // this should merge the branch as it was checked out, so it should succeed
@@ -189,25 +183,16 @@ public class MergeTest extends HudsonTestCase {
      * Manual integration should also fail if there's a collision
      */
     public void testManualIntegrationCollision() throws Exception {
-        // build should succeed because we aren't auto-committing.
-        p.getBuildersList().add(collidingChange);
         FreeStyleBuild b = assertBuildStatusSuccess(build());
+
+        commitAndUpdate("branches/b1/d");   // make a conflicting change in the branch
 
         String msg = integrateManually(b);
-        assertFalse(msg.contains("Conflict found"));
+        // this should succeed because we are integrating a commit before above
+        // assertFalse(msg.contains("Conflict found"));
 
-        p.getBuildersList().clear();
-        b = assertBuildStatusSuccess(build());
-        msg = integrateManually(b);
+        // incorret --- it fails because rebase after integrate will fail with conflict
         assertTrue(msg.contains("Conflict found"));
-    }
-
-    public void _testInteractiveDebug() throws Exception {
-        p.getBuildersList().add(collidingChange);
-        FreeStyleBuild b = assertBuildStatusSuccess(build());
-
-        Desktop.getDesktop().browse(URI.create(new WebClient().getContextPath()));
-        new BufferedReader(new InputStreamReader(System.in)).readLine();
     }
 
     /**
@@ -226,8 +211,9 @@ public class MergeTest extends HudsonTestCase {
         assertBuildStatusSuccess(build());
     }
 
-    private void commitAndUpdate(String path) throws SVNException {
+    private void commitAndUpdate(String path) throws SVNException, IOException {
         File f = new File(ws, path);
+        FileUtils.writeStringToFile(f,MAGIC_CONTENT);
         cm.getWCClient().doAdd(f,false,false,false, INFINITY,false,false);
         cm.getCommitClient().doCommit(new File[]{f}, false, "edit", null, null, false, false, INFINITY);
         cm.getUpdateClient().doUpdate(ws, HEAD, INFINITY, false, true);
@@ -310,28 +296,4 @@ created a structure
     }
 
     private static final String MAGIC_CONTENT = "created in branch";
-
-    /**
-     * Builder that makes a non-colliding change in the branch build.
-     */
-    private final TestBuilder nonCollidingChange = new TestBuilder() {
-        public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
-            // make a change in the branch and commit it.
-            // then bring the workspace to that revision
-            FilePath mr = build.getProject().getModuleRoot();
-            commitAndUpdate(listener, mr,touch(mr, "e"));
-            return true;
-        }
-    };
-    /**
-     * Builder that makes a colliding change in the branch build.
-     */
-    private TestBuilder collidingChange = new TestBuilder() {
-        public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
-            // create d, which is also added in the trunk after we branched
-            FilePath mr = build.getProject().getModuleRoot();
-            commitAndUpdate(listener,mr,touch(mr, "d"));
-            return true;
-        }
-    };
 }

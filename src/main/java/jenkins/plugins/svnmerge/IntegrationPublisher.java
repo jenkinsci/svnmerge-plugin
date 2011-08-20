@@ -6,6 +6,7 @@ import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
 import hudson.model.Result;
+import hudson.scm.SubversionSCM.SvnInfo;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Publisher;
@@ -42,7 +43,7 @@ public class IntegrationPublisher extends Publisher {
             listener.getLogger().println("Upstream Subversion URL is not specified. Configuration problem?");
             return false;
         }
-        
+
         if(ia.perform(listener)<0)
             build.setResult(Result.FAILURE);
         return true;

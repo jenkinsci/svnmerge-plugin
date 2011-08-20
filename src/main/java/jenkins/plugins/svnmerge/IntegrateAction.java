@@ -112,9 +112,18 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction implements Build
      * This requires that the calling thread owns the workspace.
      */
     /*package*/ long perform(TaskListener listener) throws IOException, InterruptedException {
-        SvnInfo si = getSvnInfo();
+        return perform(listener, getSvnInfo());
+    }
+
+    /**
+     * @param src
+     *      We are taking this revision and merge it into the upstream.
+     */
+    public long perform(TaskListener listener, SvnInfo src) throws IOException, InterruptedException {
         String commitMessage = getCommitMessage();
-        integratedRevision = getProperty().integrate(listener, si.url, si.revision, commitMessage);
+
+        // if this is -1, it doesn't capture
+        integratedRevision = getProperty().integrate(listener, src.url, -1, commitMessage);
         if(integratedRevision>0) {
             // record this integration as a fingerprint.
             // this will allow us to find where this change is integrated.
