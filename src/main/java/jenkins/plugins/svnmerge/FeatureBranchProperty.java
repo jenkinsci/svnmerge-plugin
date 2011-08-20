@@ -258,7 +258,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
                     } else {
                         logger.println("Committing changes to the upstream");
                         SVNCommitClient cc = cm.getCommitClient();
-                        ci = cc.doCommit(new File[]{mr}, false, commitMessage, null, null, false, false, INFINITY);
+                        ci = cc.doCommit(new File[]{mr}, false, commitMessage+"\n"+mergeUrl+"@"+mergeRev, null, null, false, false, INFINITY);
                         if(ci.getNewRevision()<0)
                             logger.println("  No changes since the last integration");
                         else
