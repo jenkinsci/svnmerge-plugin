@@ -135,7 +135,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
      * @param listener
      *      Where the progress is sent.
      * @param upstreamRev
-     *      Revision of the branch to be integrated to the upstream.
+     *      Revision of the upstream to rebase from.
      *      If -1, use the latest.
      * @return
      *      the new revision number if the rebase was successful.
