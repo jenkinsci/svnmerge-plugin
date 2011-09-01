@@ -10,7 +10,7 @@ To better understand this problem. I did a little experiment, whose scripts I ke
  "i": ./integrate.sh
    This integrates from the trunk to branch. First it runs "svn merge" without --reintegrate to pull in changes
    in the branch to the master, then it runs "svn merge --record-only" to record this commit
-   as merge commit in the branch
+   as merge commit in the branch (see [2])
  
  "r": ./rebase.sh --reintegrate
    This runs "svn merge" without --reintegrate to pull changes in the trunk to the branch
@@ -27,6 +27,15 @@ The following order was legal:
   1st op  R|oox
           r|oox
 
+Subversion book [1,2] implies that R and i can appear in arbitrary order, but this is not the case. As you can see above, the "ii" sequence is illegal --- in other words, you can't integrate 2nd time unless you first sync back with the trunk.
+
+Thus we need to use either "Ri"+"R" as the primitives or "iR"+"R". [1] recommends rebasing before integrating to ensure what's being integrated is good, so this justifies Ri+R. [1] also recommends deleting and recreating a feature branch after a sync, so that would justify iR+R, which is less destructive than delete+recreate.
+
+
+
+
+[1] http://svnbook.red-bean.com/nightly/en/svn.branchmerge.basicmerging.html#svn.branchemerge.basicmerging.stayinsync
+[2] http://svnbook.red-bean.com/nightly/en/svn.branchmerge.advanced.html#svn.branchmerge.advanced.reintegratetwice
 
 
 
@@ -45,5 +54,8 @@ Internals
 Related Q&As
  - http://stackoverflow.com/questions/3309602/subversion-branch-reintegration-in-v1-6
  - http://stackoverflow.com/questions/102472/subversion-branch-reintegration
+
+Other ways of feature branching
+ - http://designbygravity.wordpress.com/2009/10/19/what-mother-never-told-you-about-svn-branching-and-merging/
 
 

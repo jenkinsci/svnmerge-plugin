@@ -23,22 +23,18 @@ def pattern(str)
   end
 end
 
-# Fails
-#RIR
-#rr fails but RR works
-#RIrIrr
-#RIrIrrII
-#RIrIrRIR
-
-# using ir and R as a primitive, exhausitve combination. this works
-#pattern "-ir-ir-R-R-ir"
+# using Ri and R as a primitive, exhausitve combination. this works
+#pattern "-Ri-Ri-R-R-Ri"
 
 # trying them in random orders. this works
 #50.times do
-#  pattern ["-ir","-R"][rand(2)]
+#  pattern ["-Ri","-R"][rand(2)]
 #end
 
-pattern "-rr"
+# but "ii" fails
+# pattern "ii"
+
+pattern "ii"
 
 
 # Note: http://www.scons.org/wiki/BranchAndMerge talks about somewhat different practice
