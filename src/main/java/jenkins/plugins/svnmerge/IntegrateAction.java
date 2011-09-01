@@ -199,14 +199,12 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction implements Build
         private IntegrationTask() throws IOException {
         }
 
-        @Override
         public String getFullDisplayName() {
-            return getProject().getFullDisplayName()+" Integration";
+            return Messages.IntegrateAction_DisplayName(getProject().getFullDisplayName());
         }
 
-        @Override
         public String getDisplayName() {
-            return getProject().getDisplayName()+" Integration";
+            return Messages.IntegrateAction_DisplayName(getProject().getDisplayName());
         }
     }
 

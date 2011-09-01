@@ -7,7 +7,7 @@
     <l:main-panel>
       <h1>
         <img src="${rootURL}/plugin/svnmerge/48x48/sync.gif" />
-        Feature Branches
+        ${%Feature Branches}
       </h1>
 
       <p>
@@ -16,7 +16,7 @@
 
       <j:set var="branches" value="${it.branches}" />
       <j:if test="${!empty(branches)}">
-        <h2>Existing Feature Branches</h2>
+        <h2>${%Existing Feature Branches}</h2>
         <ul style="list-style:none">
           <j:forEach var="b" items="${branches}">
             <li>
@@ -27,7 +27,10 @@
       </j:if>
 
 
-      <h2>Create a new branch</h2>
+      <h2>${%Create a new branch}</h2>
+      <p>
+        ${%createBranchBlurb}
+      </p>
       <p>
         <form name="new" method="post" action="newBranch">
           ${%Branch Name}: <input type="text" name="name" width="30" /> 
