@@ -184,7 +184,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
                         SVNCommitClient cc = cm.getCommitClient();
                         SVNCommitInfo ci = cc.doCommit(new File[]{mr}, false, "Rebasing from "+up+"@"+mergeRev, null, null, false, false, INFINITY);
                         if(ci.getNewRevision()<0) {
-                            logger.println("  No changes since the last rebase");
+                            logger.println("  No changes since the last rebase. This rebase was a no-op.");
                             return 0L;
                         } else {
                             logger.println("  committed revision "+ci.getNewRevision());
