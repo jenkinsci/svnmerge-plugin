@@ -219,15 +219,16 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction implements Build
         if (changeEntry instanceof LogEntry) {
             LogEntry le = (LogEntry) changeEntry;
             String msg = changeEntry.getMsg().trim();
-            if(msg.startsWith(COMMIT_MESSAGE_PREFIX) && msg.endsWith(COMMIT_MESSAGE_SUFFIX)) {
+            if(msg.startsWith(COMMIT_MESSAGE_PREFIX) && msg.contains(COMMIT_MESSAGE_SUFFIX+"\n")) {
+                String s = msg.substring(0,msg.indexOf(COMMIT_MESSAGE_SUFFIX)+COMMIT_MESSAGE_SUFFIX.length());
                 // this build is merging an integration. Leave this in the record
-                return Jenkins.getInstance().getFingerprintMap().get(Util.getDigestOf(msg + "#" + le.getRevision()));
+                return Jenkins.getInstance().getFingerprintMap().get(Util.getDigestOf(s + "#" + le.getRevision()));
             }
         }
         return null;
     }
 
-    // used to find integration commits
+    // used to find integration commits. commit messages start with PREFIX, contains SUFFIX, followed by paths
     static final String COMMIT_MESSAGE_PREFIX = "Integrated ";
     static final String COMMIT_MESSAGE_SUFFIX = " (from Jenkins)";
 }

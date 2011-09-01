@@ -26,7 +26,7 @@ public class ChangeLogAnnotatorImpl extends ChangeLogAnnotator {
                 Run r = f.getOriginal().getRun();
                 text.addMarkup(
                     IntegrateAction.COMMIT_MESSAGE_PREFIX.length(),
-                    text.length()-IntegrateAction.COMMIT_MESSAGE_SUFFIX.length(),
+                    text.getText().indexOf(IntegrateAction.COMMIT_MESSAGE_SUFFIX),
                     "<a href='"+
                     Stapler.getCurrentRequest().getContextPath()+"/"+r.getUrl()
                     +"'>","</a>");
