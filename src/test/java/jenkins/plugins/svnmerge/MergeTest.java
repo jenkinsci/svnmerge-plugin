@@ -173,7 +173,7 @@ public class MergeTest extends HudsonTestCase {
         System.out.println("-- Now Merging manually");
         IntegrateAction ma = b.getAction(IntegrateAction.class);
         // XXX this can block indefinitely!
-        IntegrateAction.WorkerThread thread = ma.performAsync().get();
+        IntegrateAction.WorkerThread thread = ma.performAsync(new IntegrateSetting()).get();
         String msg = IOUtils.toString(thread.readAll());
         System.out.println(msg);
         return msg;

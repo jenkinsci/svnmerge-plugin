@@ -1,10 +1,15 @@
 package jenkins.plugins.svnmerge;
 
 import hudson.model.AbstractProject;
+import hudson.model.PermalinkProjectAction.Permalink;
 import hudson.model.Queue.Task;
+import hudson.model.Run;
 import hudson.model.TaskListener;
+import hudson.scm.SubversionSCM.SvnInfo;
+import hudson.scm.SubversionTagAction;
 import hudson.security.ACL;
 import jenkins.model.Jenkins;
+import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
@@ -17,7 +22,7 @@ import java.io.IOException;
  *
  * @author Kohsuke Kawaguchi
  */
-public class RebaseAction extends AbstractSvnmergeTaskAction {
+public class RebaseAction extends AbstractSvnmergeTaskAction<RebaseSetting> {
     public final AbstractProject<?,?> project;
 
     public RebaseAction(AbstractProject<?,?> project) {
@@ -58,9 +63,29 @@ public class RebaseAction extends AbstractSvnmergeTaskAction {
         return new File(project.getRootDir(),"rebase.log");
     }
 
+    protected RebaseSetting createParams(StaplerRequest req) {
+        String id = req.getParameter("permalink");
+        AbstractProject<?, ?> up = getProperty().getUpstreamProject();
+        Permalink p = up.getPermalinks().get(id);
+        if (p!=null) {
+            Run<?,?> b = p.resolve(up);
+            if (b!=null) {
+                SubversionTagAction a = b.getAction(SubversionTagAction.class);
+                if (a==null)
+                    throw new IllegalStateException("Unable to determine the Subversion revision number from "+b.getFullDisplayName());
+
+                // TODO: what to do if this involves multiple URLs?
+                SvnInfo sv = a.getTags().keySet().iterator().next();
+                return new RebaseSetting(sv.revision);
+            }
+        }
+
+        return new RebaseSetting(-1);
+    }
+
     @Override
-    protected TaskImpl createTask() throws IOException {
-        return new RebaseTask();
+    protected TaskImpl createTask(RebaseSetting param) throws IOException {
+        return new RebaseTask(param);
     }
 
     /**
@@ -68,8 +93,8 @@ public class RebaseAction extends AbstractSvnmergeTaskAction {
      * <p>
      * This requires that the calling thread owns the workspace.
      */
-    /*package*/ long perform(TaskListener listener) throws IOException, InterruptedException {
-        long integratedRevision = getProperty().rebase(listener, -1);
+    /*package*/ long perform(TaskListener listener, RebaseSetting param) throws IOException, InterruptedException {
+        long integratedRevision = getProperty().rebase(listener, param.revision);
 //        if(integratedRevision>0) {
 //            // record this integration as a fingerprint.
 //            // this will allow us to find where this change is integrated.
@@ -85,7 +110,7 @@ public class RebaseAction extends AbstractSvnmergeTaskAction {
      */
     public void doCancelQueue(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
         project.checkPermission(AbstractProject.BUILD);
-        Jenkins.getInstance().getQueue().cancel(new RebaseTask());
+        Jenkins.getInstance().getQueue().cancel(new RebaseTask(null));
         rsp.forwardToPreviousPage(req);
     }
 
@@ -102,15 +127,14 @@ public class RebaseAction extends AbstractSvnmergeTaskAction {
      * {@link Task} that performs the integration.
      */
     private class RebaseTask extends TaskImpl {
-        private RebaseTask() throws IOException {
+        private RebaseTask(RebaseSetting param) throws IOException {
+            super(param);
         }
 
-        @Override
         public String getFullDisplayName() {
             return "Rebasing "+getProject().getFullDisplayName();
         }
 
-        @Override
         public String getDisplayName() {
             return "Rebasing "+getProject().getDisplayName();
         }

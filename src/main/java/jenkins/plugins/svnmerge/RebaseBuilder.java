@@ -20,7 +20,8 @@ public class RebaseBuilder extends Builder {
 
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
-        new RebaseAction(build.getProject()).perform(listener);
+        // TODO: allow the user to pick the permalink
+        new RebaseAction(build.getProject()).perform(listener,new RebaseSetting(-1));
         return true;
     }
 

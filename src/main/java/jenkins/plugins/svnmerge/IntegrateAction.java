@@ -30,7 +30,7 @@ import java.util.Map;
  *
  * @author Kohsuke Kawaguchi
  */
-public class IntegrateAction extends AbstractSvnmergeTaskAction implements BuildBadgeAction {
+public class IntegrateAction extends AbstractSvnmergeTaskAction<IntegrateSetting> implements BuildBadgeAction {
     public final AbstractBuild<?,?> build;
 
     /**
@@ -91,8 +91,13 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction implements Build
     }
 
     @Override
-    protected TaskImpl createTask() throws IOException {
-        return new IntegrationTask();
+    protected TaskImpl createTask(IntegrateSetting s) throws IOException {
+        return new IntegrationTask(s);
+    }
+
+    @Override
+    protected IntegrateSetting createParams(StaplerRequest req) throws IOException {
+        return new IntegrateSetting();
     }
 
     /**
@@ -111,7 +116,7 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction implements Build
      * <p>
      * This requires that the calling thread owns the workspace.
      */
-    /*package*/ long perform(TaskListener listener) throws IOException, InterruptedException {
+    /*package*/ long perform(TaskListener listener, IntegrateSetting _) throws IOException, InterruptedException {
         return perform(listener, getSvnInfo());
     }
 
@@ -179,7 +184,7 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction implements Build
      */
     public void doCancelQueue(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
         build.getProject().checkPermission(AbstractProject.BUILD);
-        Jenkins.getInstance().getQueue().cancel(new IntegrationTask());
+        Jenkins.getInstance().getQueue().cancel(new IntegrationTask(null));
         rsp.forwardToPreviousPage(req);
     }
 
@@ -196,7 +201,8 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction implements Build
      * {@link Task} that performs the integration.
      */
     private class IntegrationTask extends TaskImpl {
-        private IntegrationTask() throws IOException {
+        private IntegrationTask(IntegrateSetting s) throws IOException {
+            super(s);
         }
 
         public String getFullDisplayName() {
@@ -210,7 +216,7 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction implements Build
 
     /**
      * Checks if the given {@link Entry} represents a commit from
-     * {@linkplain #perform(TaskListener) integration}. If so,
+     * {@linkplain #perform(TaskListener,IntegrateSetting) integration}. If so,
      * return its fingerprint.
      *
      * Otherwise null.
@@ -219,8 +225,8 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction implements Build
         if (changeEntry instanceof LogEntry) {
             LogEntry le = (LogEntry) changeEntry;
             String msg = changeEntry.getMsg().trim();
-            if(msg.startsWith(COMMIT_MESSAGE_PREFIX) && msg.contains(COMMIT_MESSAGE_SUFFIX+"\n")) {
-                String s = msg.substring(0,msg.indexOf(COMMIT_MESSAGE_SUFFIX)+COMMIT_MESSAGE_SUFFIX.length());
+            if(msg.startsWith(COMMIT_MESSAGE_PREFIX) && msg.contains(COMMIT_MESSAGE_SUFFIX + "\n")) {
+                String s = msg.substring(0, msg.indexOf(COMMIT_MESSAGE_SUFFIX) + COMMIT_MESSAGE_SUFFIX.length());
                 // this build is merging an integration. Leave this in the record
                 return Jenkins.getInstance().getFingerprintMap().get(Util.getDigestOf(s + "#" + le.getRevision()));
             }

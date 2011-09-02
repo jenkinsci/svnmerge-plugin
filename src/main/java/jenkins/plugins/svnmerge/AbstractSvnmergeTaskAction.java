@@ -27,8 +27,10 @@ import java.util.concurrent.Future;
 
 /**
  * @author Kohsuke Kawaguchi
+ * @param <P>
+ *          Type that represents the parameter of the action
  */
-public abstract class AbstractSvnmergeTaskAction extends TaskAction {
+public abstract class AbstractSvnmergeTaskAction<P> extends TaskAction {
     /*package*/ AbstractSvnmergeTaskAction() { // subtyping only allowed for this plugin
     }
 
@@ -59,20 +61,22 @@ public abstract class AbstractSvnmergeTaskAction extends TaskAction {
      * <p>
      * This happens asynchronously.
      */
-    public Future<WorkerThread> performAsync() throws IOException {
+    public Future<WorkerThread> performAsync(P param) throws IOException {
         getACL().checkPermission(getPermission());
-        TaskImpl task = createTask();
+        TaskImpl task = createTask(param);
         Jenkins.getInstance().getQueue().schedule(task, 0);
         return task.future;
     }
 
-    protected abstract TaskImpl createTask() throws IOException;
+    protected abstract TaskImpl createTask(P param) throws IOException;
+
+    protected abstract P createParams(StaplerRequest req) throws IOException;
 
     /**
      * Called from UI to commence this task.
      */
-    public synchronized void doPerform(StaplerResponse rsp) throws IOException, ServletException {
-        performAsync();
+    public synchronized void doPerform(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
+        performAsync(createParams(req));
         rsp.sendRedirect(".");
     }
 
@@ -81,7 +85,7 @@ public abstract class AbstractSvnmergeTaskAction extends TaskAction {
      * <p>
      * This requires that the calling thread owns the workspace.
      */
-    /*package*/ abstract long perform(TaskListener listener) throws IOException, InterruptedException;
+    /*package*/ abstract long perform(TaskListener listener, P param) throws IOException, InterruptedException;
 
     /**
      * Which page to render in the top page?
@@ -89,13 +93,16 @@ public abstract class AbstractSvnmergeTaskAction extends TaskAction {
     protected abstract String decidePage();
 
     public final class WorkerThread extends TaskThread {
-        public WorkerThread() throws IOException {
+        public final P param;
+
+        public WorkerThread(P param) throws IOException {
             super(AbstractSvnmergeTaskAction.this, ListenerAndText.forFile(getLogFile(),AbstractSvnmergeTaskAction.this));
             associateWith(AbstractSvnmergeTaskAction.this);
+            this.param = param;
         }
 
         protected void perform(TaskListener listener) throws Exception {
-            AbstractSvnmergeTaskAction.this.perform(listener);
+            AbstractSvnmergeTaskAction.this.perform(listener,param);
         }
     }
 
@@ -106,9 +113,9 @@ public abstract class AbstractSvnmergeTaskAction extends TaskAction {
         private final AsyncFutureImpl<WorkerThread> future = new AsyncFutureImpl<WorkerThread>();
         private final WorkerThread thread;
 
-        public TaskImpl() throws IOException {
+        public TaskImpl(P param) throws IOException {
             // do this now so that this gets tied with the action.
-            thread = new WorkerThread();
+            thread = new WorkerThread(param);
         }
 
         public boolean isConcurrentBuild() {
@@ -178,7 +185,7 @@ public abstract class AbstractSvnmergeTaskAction extends TaskAction {
 
         @Override
         public boolean equals(Object obj) {
-            if (obj instanceof TaskImpl) {
+            if (obj instanceof AbstractSvnmergeTaskAction.TaskImpl) {
                 TaskImpl that = (TaskImpl) obj;
                 return this.getProject()==that.getProject();
             }
