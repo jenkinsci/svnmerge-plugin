@@ -28,7 +28,7 @@ l.layout(norefresh:"true",title:_("Feature Branches of {0}",my.project.displayNa
         }
 
         h2(_("Create a new branch"))
-        p(_("createBranchBllurb"))
+        p(_("createBranchBlurb"))
         p {
             form (name:"new", method:"post", action:"newBranch") {
                 text(_("Branch Name")+":")

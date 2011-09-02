@@ -1,10 +1,8 @@
-import lib.LayoutTagLib
-import lib.JenkinsTagLib
-import lib.FormTagLib
+package jenkins.plugins.svnmerge.RebaseAction
 
-def f = namespace(FormTagLib.class)
-def l = namespace(LayoutTagLib.class)
-def t = namespace(JenkinsTagLib.class)
+def f = namespace(lib.FormTagLib.class)
+def l = namespace(lib.LayoutTagLib.class)
+def t = namespace(lib.JenkinsTagLib.class)
 def st = namespace("jelly:stapler")
 
 l.layout(norefresh:true, title:_("Rebase changes from upstream")) {
