@@ -279,20 +279,24 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
 
                     if (trunkCommit>=0) {
                         cm.getUpdateClient().doUpdate(mr, HEAD, INFINITY, false, false);
-
-                        // if the trunk merge produces a commit M, then we want to do "svn merge --record-only -c M <UpstreamURL>"
-                        // to convince Subversion not to try to merge rev.M again when re-integrating from the trunk in the future,
-                        // equivalent of single commit
-                        SVNRevisionRange r = new SVNRevisionRange(SVNRevision.create(trunkCommit-1),
-                                                                  SVNRevision.create(trunkCommit));
-                        String msg = "Block the merge commit rev." + trunkCommit + " from getting merged back into our branch";
-                        logger.println(msg);
-                        dc.doMerge(up,HEAD,Arrays.asList(r), mr, INFINITY, true/*opposite of --ignore-ancestory in CLI*/, false, false, true);
-
                         SVNCommitClient cc = cm.getCommitClient();
-                        SVNCommitInfo bci = cc.doCommit(new File[]{mr}, false, msg, null, null, false, false, INFINITY);
-                        logger.println("  committed revision "+bci.getNewRevision());
-                        cm.getUpdateClient().doUpdate(mr, HEAD, INFINITY, false, false);
+
+                        if (false) {
+                            // taking Jack Repennings advise not to do this.
+
+                            // if the trunk merge produces a commit M, then we want to do "svn merge --record-only -c M <UpstreamURL>"
+                            // to convince Subversion not to try to merge rev.M again when re-integrating from the trunk in the future,
+                            // equivalent of single commit
+                            SVNRevisionRange r = new SVNRevisionRange(SVNRevision.create(trunkCommit-1),
+                                                                      SVNRevision.create(trunkCommit));
+                            String msg = "Block the merge commit rev." + trunkCommit + " from getting merged back into our branch";
+                            logger.println(msg);
+                            dc.doMerge(up,HEAD,Arrays.asList(r), mr, INFINITY, true/*opposite of --ignore-ancestory in CLI*/, false, false, true);
+
+                            SVNCommitInfo bci = cc.doCommit(new File[]{mr}, false, msg, null, null, false, false, INFINITY);
+                            logger.println("  committed revision "+bci.getNewRevision());
+                            cm.getUpdateClient().doUpdate(mr, HEAD, INFINITY, false, false);
+                        }
 
                         // this is the black magic part, but my experiments reveal that we need to run trunk->branch merge --reintegrate
                         // or else future rebase fails
@@ -304,7 +308,8 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
                             return -1L;
                         }
 
-                        bci = cc.doCommit(new File[]{mr}, false, msg, null, null, false, false, INFINITY);
+                        String msg = "Rebasing with the integration commit that was just made in rev."+trunkCommit;
+                        SVNCommitInfo bci = cc.doCommit(new File[]{mr}, false, msg, null, null, false, false, INFINITY);
                         logger.println("  committed revision "+bci.getNewRevision());
                     }
 
