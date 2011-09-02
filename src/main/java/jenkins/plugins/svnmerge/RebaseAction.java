@@ -1,5 +1,6 @@
 package jenkins.plugins.svnmerge;
 
+import hudson.AbortException;
 import hudson.model.AbstractProject;
 import hudson.model.PermalinkProjectAction.Permalink;
 import hudson.model.Queue.Task;
@@ -9,7 +10,6 @@ import hudson.scm.SubversionSCM.SvnInfo;
 import hudson.scm.SubversionTagAction;
 import hudson.security.ACL;
 import jenkins.model.Jenkins;
-import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
@@ -65,22 +65,8 @@ public class RebaseAction extends AbstractSvnmergeTaskAction<RebaseSetting> {
 
     protected RebaseSetting createParams(StaplerRequest req) {
         String id = req.getParameter("permalink");
-        AbstractProject<?, ?> up = getProperty().getUpstreamProject();
-        Permalink p = up.getPermalinks().get(id);
-        if (p!=null) {
-            Run<?,?> b = p.resolve(up);
-            if (b!=null) {
-                SubversionTagAction a = b.getAction(SubversionTagAction.class);
-                if (a==null)
-                    throw new IllegalStateException("Unable to determine the Subversion revision number from "+b.getFullDisplayName());
-
-                // TODO: what to do if this involves multiple URLs?
-                SvnInfo sv = a.getTags().keySet().iterator().next();
-                return new RebaseSetting(sv.revision);
-            }
-        }
-
-        return new RebaseSetting(-1);
+        if (id!=null)   return new RebaseSetting(id);
+        else            return new RebaseSetting(-1);
     }
 
     @Override
@@ -94,7 +80,29 @@ public class RebaseAction extends AbstractSvnmergeTaskAction<RebaseSetting> {
      * This requires that the calling thread owns the workspace.
      */
     /*package*/ long perform(TaskListener listener, RebaseSetting param) throws IOException, InterruptedException {
-        long integratedRevision = getProperty().rebase(listener, param.revision);
+        long rev;
+
+        if (param.permalink!=null) {
+            AbstractProject<?, ?> up = getProperty().getUpstreamProject();
+            Permalink p = up.getPermalinks().get(param.permalink);
+            Run<?,?> b = p.resolve(up);
+            if (b==null) {
+                listener.getLogger().println("No build that matches "+p.getDisplayName()+". Rebase is no-nop.");
+                return -1;
+            }
+
+            SubversionTagAction a = b.getAction(SubversionTagAction.class);
+            if (a==null)
+                throw new AbortException("Unable to determine the Subversion revision number from "+b.getFullDisplayName());
+
+            // TODO: what to do if this involves multiple URLs?
+            SvnInfo sv = a.getTags().keySet().iterator().next();
+            rev = sv.revision;
+        } else {
+            rev = param.revision;
+        }
+
+        long integratedRevision = getProperty().rebase(listener, rev);
 //        if(integratedRevision>0) {
 //            // record this integration as a fingerprint.
 //            // this will allow us to find where this change is integrated.
