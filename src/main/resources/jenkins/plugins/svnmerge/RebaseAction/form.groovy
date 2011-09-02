@@ -25,7 +25,7 @@ l.layout(norefresh:true, title:_("Rebase changes from upstream")) {
 
         form (action:"perform",method:"post",name:"rebase") {
             p {
-                tex(_("Revision/build to rebase with: "))
+                tex(_("Revision/build to rebase to: "))
                 select (name:"permalink") {
                     option(value:"(default)", _("Latest revision"))
                     up.permalinks.each { p ->
@@ -36,7 +36,7 @@ l.layout(norefresh:true, title:_("Rebase changes from upstream")) {
                 }
             }
 
-            f.submit(value:_("Rebase with the upstream"))
+            f.submit(value:_("Rebase"))
         }
 
         if (my.logFile.exists()) {

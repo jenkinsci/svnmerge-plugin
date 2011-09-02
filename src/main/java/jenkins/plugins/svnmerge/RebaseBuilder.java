@@ -43,7 +43,7 @@ public class RebaseBuilder extends Builder {
 
         @Override
         public String getDisplayName() {
-            return "Perform svn merge from upstream branch";
+            return "Rebase with upstream Subversion revision";
         }
 
         public ListBoxModel doFillPermalinkItems(@AncestorInPath AbstractProject prj) {

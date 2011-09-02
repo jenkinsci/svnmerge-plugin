@@ -1,9 +1,15 @@
 <div>
     This works in conjunction with the "This project builds a Subversion feature branch" checkbox above.
-    This build step merges any revisions in the upstream branch, via <tt>svn merge --reintegrate</tt>, and
+    This build step merges any revisions in the upstream branch, via <tt>svn merge</tt>, and
     commits them. This is normally called <b>rebasing</b> in Subversion.
     Automatic rebasing is useful to keep branches close to the upstream, thereby reducing
     the risk of integration problem down the road.
+
+    <p>
+    You can rebase from the latest revision in the upstream branch, but you can
+    also do safer rebase by choosing the permalink. For example, if you specify "last stable",
+    then Jenkins will look for the last stable build, then rebase with the corresponding
+    Subversion revision. Thus you know that you are rebasing to the known good state.
 
     <p>
     If you don't want Jenkins to automatically rebase, you can still use the "Rebase From Upstream" link
