@@ -80,26 +80,26 @@ public class RebaseAction extends AbstractSvnmergeTaskAction<RebaseSetting> {
      * This requires that the calling thread owns the workspace.
      */
     /*package*/ long perform(TaskListener listener, RebaseSetting param) throws IOException, InterruptedException {
-        long rev;
+        long rev = param.revision;
 
         if (param.permalink!=null) {
             AbstractProject<?, ?> up = getProperty().getUpstreamProject();
             Permalink p = up.getPermalinks().get(param.permalink);
-            Run<?,?> b = p.resolve(up);
-            if (b==null) {
-                listener.getLogger().println("No build that matches "+p.getDisplayName()+". Rebase is no-nop.");
-                return -1;
+            if (p!=null) {
+                Run<?,?> b = p.resolve(up);
+                if (b==null) {
+                    listener.getLogger().println("No build that matches "+p.getDisplayName()+". Rebase is no-nop.");
+                    return -1;
+                }
+
+                SubversionTagAction a = b.getAction(SubversionTagAction.class);
+                if (a==null)
+                    throw new AbortException("Unable to determine the Subversion revision number from "+b.getFullDisplayName());
+
+                // TODO: what to do if this involves multiple URLs?
+                SvnInfo sv = a.getTags().keySet().iterator().next();
+                rev = sv.revision;
             }
-
-            SubversionTagAction a = b.getAction(SubversionTagAction.class);
-            if (a==null)
-                throw new AbortException("Unable to determine the Subversion revision number from "+b.getFullDisplayName());
-
-            // TODO: what to do if this involves multiple URLs?
-            SvnInfo sv = a.getTags().keySet().iterator().next();
-            rev = sv.revision;
-        } else {
-            rev = param.revision;
         }
 
         long integratedRevision = getProperty().rebase(listener, rev);

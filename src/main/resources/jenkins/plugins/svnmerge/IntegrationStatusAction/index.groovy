@@ -27,12 +27,13 @@ l.layout(norefresh:true, title:_("title",my.project.displayName)) {
             p {
                 text("Last Integration is from ")
                 t.buildLink(job:my.project, number:ia.build.number)
+                text(" ")
                 text(_("ago",ia.build.timestampString))
             }
             p {
               int n = ia.upstreamBuildNumber
                 if (n>=0) {
-                    text("This integration is built into")
+                    text("This integration is built into ")
                     t.buildLink(jobName:my.branchProperty.upstream, job:my.branchProperty.upstreamProject, number:n)
                 } else {
                     text(_("No build has incorporated this integration yet."))
