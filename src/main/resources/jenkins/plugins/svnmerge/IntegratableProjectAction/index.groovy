@@ -5,7 +5,7 @@ def f = namespace(lib.FormTagLib.class)
 def l = namespace(lib.LayoutTagLib.class)
 def t = namespace(lib.JenkinsTagLib.class)
 
-l.layout(norefresh:"true",title:_("Feature Branches of {0}",my.project.displayName)) {
+l.layout(norefresh:"true",title:_("title",my.project.displayName)) {
     include(my.project, "sidepanel")
     l.main_panel {
         h1 {

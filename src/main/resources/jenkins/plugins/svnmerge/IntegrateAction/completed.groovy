@@ -10,7 +10,7 @@ l.layout(norefresh:"true", title:"#${my.build.number} Integration") {
     l.main_panel {
         h1 {
             img(src:"${rootURL}/plugin/svnmerge/48x48/integrate.gif")
-            text(_("Integrated as rev.{0}", my.integratedRevision))
+            text(_("title", my.integratedRevision))
         }
 
         n = my.upstreamBuildNumber

@@ -8,12 +8,12 @@ import hudson.Functions
 def l = namespace(LayoutTagLib.class)
 def t = namespace(JenkinsTagLib.class)
 
-l.layout(norefresh:true, title:_("${my.project.displayName} Integration Status")) {
+l.layout(norefresh:true, title:_("title",my.project.displayName)) {
     include(my.project, "sidepanel")
     l.main_panel {
         h1 {
             img(src:"${rootURL}/plugin/svnmerge/48x48/integrate.gif")
-            text(_("Integration Status"))
+            text(_("title",my.project.displayName))
         }
 
         def ia = my.lastIntegrateAction;
@@ -27,7 +27,7 @@ l.layout(norefresh:true, title:_("${my.project.displayName} Integration Status")
             p {
                 text("Last Integration is from ")
                 t.buildLink(job:my.project, number:ia.build.number)
-                text(_("({0} ago)",ia.build.timestampString))
+                text(_("ago",ia.build.timestampString))
             }
             p {
               int n = ia.upstreamBuildNumber
@@ -40,6 +40,6 @@ l.layout(norefresh:true, title:_("${my.project.displayName} Integration Status")
             }
         }
 
-        p(_("Subversion Revision: {0}", ia.integratedRevision))
+        p(_("Subversion Revision")+":"+ia.integratedRevision)
     }
 }

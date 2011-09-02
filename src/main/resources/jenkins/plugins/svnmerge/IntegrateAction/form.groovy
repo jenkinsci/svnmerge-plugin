@@ -9,7 +9,7 @@ l.layout(norefresh:"true", title:"#${my.build.number} Integration") {
     include(my.build, "sidepanel")
     l.main_panel {
         img(src:"${rootURL}/plugin/svnmerge/48x48/integrate.gif")
-        text(_("Integrate {0} to upstream", my.build.displayName))
+        text(_("title", my.build.displayName))
     }
 
     p {
