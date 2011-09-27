@@ -39,8 +39,8 @@ l.layout(norefresh:true, title:_("title",my.project.displayName)) {
                     text(_("No build has incorporated this integration yet."))
                 }
             }
-        }
 
-        p(_("Subversion Revision")+":"+ia.integratedRevision)
+            p(_("Subversion Revision")+":"+ia.integratedRevision)
+        }
     }
 }
