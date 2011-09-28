@@ -21,7 +21,7 @@ l.layout(norefresh:"true", title:"#${my.build.number} Integration") {
         f.submit(value:_("Integrate this build to upstream"))
     }
 
-    if (my.integratedRevision<0) {
+    if (my.integratedRevision!=null && my.integratedRevision<0) {
         h2(style:"margin-top:2em", _("Last Failure"))
         pre {
             st.copyStream(reader:my.log.readAll())
