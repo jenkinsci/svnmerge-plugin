@@ -19,10 +19,12 @@ l.layout(norefresh:true, title:_("title",my.project.displayName)) {
         def ia = my.lastIntegrateAction;
 
         if (ia==null) {
-            p("""
-            This project has not been integrated to
-            <a href="${Functions.getRelativeLinkTo(my.branchProperty.upstreamProject)}">the upstream</a> yet."))
-            """)
+            p {
+                raw("""
+                This project has not been integrated to
+                <a href="${Functions.getRelativeLinkTo(my.branchProperty.upstreamProject)}">the upstream</a> yet."
+                """)
+            }
         } else {
             p {
                 text("Last Integration is from ")
