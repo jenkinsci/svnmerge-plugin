@@ -145,7 +145,13 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
     public long rebase(final TaskListener listener, final long upstreamRev) throws IOException, InterruptedException {
         final ISVNAuthenticationProvider provider = Jenkins.getInstance().getDescriptorByType(
                 SubversionSCM.DescriptorImpl.class).createAuthenticationProvider();
-        return owner.getModuleRoot().act(new FileCallable<Long>() {
+        AbstractBuild build = owner.getSomeBuildWithWorkspace();
+        if (build == null) {
+            final PrintStream logger = listener.getLogger();
+            logger.print("No workspace found for project! Please perform a build first.\n");
+            return -1L;
+        }
+        return build.getModuleRoot().act(new FileCallable<Long>() {
             public Long invoke(File mr, VirtualChannel virtualChannel) throws IOException {
                 try {
                     final PrintStream logger = listener.getLogger();
@@ -219,7 +225,13 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
     public long integrate(final TaskListener listener, final String branchURL, final long branchRev, final String commitMessage) throws IOException, InterruptedException {
         final ISVNAuthenticationProvider provider = Jenkins.getInstance().getDescriptorByType(
                 SubversionSCM.DescriptorImpl.class).createAuthenticationProvider();
-        return owner.getModuleRoot().act(new FileCallable<Long>() {
+        AbstractBuild build = owner.getSomeBuildWithWorkspace();
+        if (build == null) {
+            final PrintStream logger = listener.getLogger();
+            logger.print("No workspace found for project! Please perform a build first.\n");
+            return -1L;
+        }
+        return build.getModuleRoot().act(new FileCallable<Long>() {
             public Long invoke(File mr, VirtualChannel virtualChannel) throws IOException {
                 try {
                     final PrintStream logger = listener.getLogger();
