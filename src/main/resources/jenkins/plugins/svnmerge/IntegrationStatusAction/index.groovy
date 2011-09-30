@@ -19,10 +19,11 @@ l.layout(norefresh:true, title:_("title",my.project.displayName)) {
         def ia = my.lastIntegrateAction;
 
         if (ia==null) {
-            p("""
-            This project has not been integrated to
-            <a href="${Functions.getRelativeLinkTo(my.branchProperty.upstreamProject)}">the upstream</a> yet."))
-            """)
+            p {
+                text("This project has not been integrated to ")
+                a(href: Functions.getRelativeLinkTo(my.branchProperty.upstreamProject), "the upstream")
+                text(" yet.")
+            }
         } else {
             p {
                 text("Last Integration is from ")
@@ -39,8 +40,7 @@ l.layout(norefresh:true, title:_("title",my.project.displayName)) {
                     text(_("No build has incorporated this integration yet."))
                 }
             }
+            p(_("Subversion Revision")+":"+ia.integratedRevision)
         }
-
-        p(_("Subversion Revision")+":"+ia.integratedRevision)
     }
 }

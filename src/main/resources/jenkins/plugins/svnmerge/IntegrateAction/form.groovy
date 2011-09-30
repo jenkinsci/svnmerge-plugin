@@ -10,21 +10,21 @@ l.layout(norefresh:"true", title:"#${my.build.number} Integration") {
     l.main_panel {
         img(src:"${rootURL}/plugin/svnmerge/48x48/integrate.gif")
         text(_("title", my.build.displayName))
-    }
 
-    p {
-        text("This will merge ${my.svnInfo} to")
-        t.jobLink(job:my.property.upstreamProject)
-    }
+        p {
+            text("This will merge ${my.svnInfo} to")
+            t.jobLink(job:my.property.upstreamProject)
+        }
 
-    form(action:"perform", method:"post", name:"integrate") {
-        f.submit(value:_("Integrate this build to upstream"))
-    }
+        form(action:"perform", method:"post", name:"integrate") {
+            f.submit(value:_("Integrate this build to upstream"))
+        }
 
-    if (my.integratedRevision<0) {
-        h2(style:"margin-top:2em", _("Last Failure"))
-        pre {
-            st.copyStream(reader:my.log.readAll())
+        if (my.integratedRevision<0 && my.logFile.exists()) {
+            h2(style:"margin-top:2em", _("Last Failure"))
+            pre {
+                st.copyStream(reader:my.log.readAll())
+            }
         }
     }
 }
