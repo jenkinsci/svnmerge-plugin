@@ -75,7 +75,7 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction<IntegrateSetting
     }
 
     public boolean isIntegrated() {
-        return integratedRevision!=null && integratedRevision>=0;
+        return integratedRevision!=null && integratedRevision>0;
     }
 
     public boolean isIntegrationAttempted() {
