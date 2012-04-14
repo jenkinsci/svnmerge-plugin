@@ -14,6 +14,7 @@ import hudson.scm.SubversionSCM.SvnInfo;
 import hudson.scm.SubversionTagAction;
 import hudson.security.ACL;
 import jenkins.model.Jenkins;
+import jenkins.plugins.svnmerge.FeatureBranchProperty.IntegrationResult;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
@@ -40,6 +41,11 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction<IntegrateSetting
      */
     private Long integratedRevision;
 
+    /**
+     * Commit in the branch that was merged into the {@link #integratedRevision}
+     */
+    private Long integrationSource;
+    
     public IntegrateAction(AbstractBuild<?,?> build) {
         this.build = build;
     }
@@ -86,6 +92,10 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction<IntegrateSetting
         return integratedRevision;
     }
 
+    public Long getIntegrationSource() {
+        return integrationSource;
+    }
+
     public File getLogFile() {
         return new File(build.getRootDir(),"integrate.log");
     }
@@ -128,7 +138,9 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction<IntegrateSetting
         String commitMessage = getCommitMessage();
 
         // if this is -1, it doesn't capture
-        integratedRevision = getProperty().integrate(listener, src.url, -1, commitMessage);
+        IntegrationResult r = getProperty().integrate(listener, src.url, -1, commitMessage);
+        integratedRevision = r.mergeCommit;
+        integrationSource = r.integrationSource;
         if(integratedRevision>0) {
             // record this integration as a fingerprint.
             // this will allow us to find where this change is integrated.
