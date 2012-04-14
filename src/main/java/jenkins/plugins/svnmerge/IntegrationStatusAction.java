@@ -39,7 +39,7 @@ public class IntegrationStatusAction implements PermalinkProjectAction {
         return getLastIntegrateAction(project);
     }
 
-    private static IntegrateAction getLastIntegrateAction(Job<?,?> j) {
+    static IntegrateAction getLastIntegrateAction(Job<?,?> j) {
         for(Run<?,?> b=j.getLastBuild(); b!=null; b=b.getPreviousBuild()) {
             IntegrateAction ia = b.getAction(IntegrateAction.class);
             if(ia!=null && ia.isIntegrated())

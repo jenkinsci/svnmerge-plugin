@@ -21,8 +21,10 @@ import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
+import org.tmatesoft.svn.core.ISVNLogEntryHandler;
 import org.tmatesoft.svn.core.SVNCommitInfo;
 import org.tmatesoft.svn.core.SVNException;
+import org.tmatesoft.svn.core.SVNLogEntry;
 import org.tmatesoft.svn.core.SVNURL;
 import org.tmatesoft.svn.core.auth.ISVNAuthenticationProvider;
 import org.tmatesoft.svn.core.wc.ISVNEventHandler;
@@ -182,7 +184,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
                     } else {
                         logger.println("Committing changes");
                         SVNCommitClient cc = cm.getCommitClient();
-                        SVNCommitInfo ci = cc.doCommit(new File[]{mr}, false, "Rebasing from "+up+"@"+mergeRev, null, null, false, false, INFINITY);
+                        SVNCommitInfo ci = cc.doCommit(new File[]{mr}, false, RebaseAction.COMMIT_MESSAGE_PREFIX+"Rebasing from "+up+"@"+mergeRev, null, null, false, false, INFINITY);
                         if(ci.getNewRevision()<0) {
                             logger.println("  No changes since the last rebase. This rebase was a no-op.");
                             return 0L;
@@ -212,11 +214,14 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
      *      Revision of the branch to be integrated to the upstream.
      *      If -1, use the current workspace revision.
      * @return
-     *      the new revision number if the integration was successful.
+     *      the new revision number if the integration was successful,
+     *      or 0 if the integration was no-op and no commit was made.
      *      -1 if it failed and the failure was handled gracefully
      *      (typically this means a merge conflict.) 
      */
     public long integrate(final TaskListener listener, final String branchURL, final long branchRev, final String commitMessage) throws IOException, InterruptedException {
+        final Long lastIntegratedRevision = getlastIntegratedRevision();
+
         final ISVNAuthenticationProvider provider = Jenkins.getInstance().getDescriptorByType(
                 SubversionSCM.DescriptorImpl.class).createAuthenticationProvider();
         return owner.getModuleRoot().act(new FileCallable<Long>() {
@@ -237,6 +242,28 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
                     SVNClientManager cm = SubversionSCM.createSvnClientManager(provider);
                     cm.setEventHandler(printHandler);
 
+                    // do we have any meaningful changes in this branch worthy of integration?
+                    if (lastIntegratedRevision!=null) {
+                        final SVNException eureka = new SVNException(null);
+                        try {
+                            cm.getLogClient().doLog(new File[]{mr},SVNRevision.HEAD,SVNRevision.create(lastIntegratedRevision),true,false,-1,new ISVNLogEntryHandler() {
+                                public void handleLogEntry(SVNLogEntry e) throws SVNException {
+                                    if (e.getMessage().startsWith(RebaseAction.COMMIT_MESSAGE_PREFIX)
+                                     || e.getMessage().startsWith(IntegrateAction.COMMIT_MESSAGE_PREFIX))
+                                        return; // merge commits
+                                    throw eureka;
+                                }
+                            });
+                            // didn't find anything interesting. all the changes are our merges
+                            logger.println("No changes to be integrated. Skipping integration.");
+                            return 0L;
+                        } catch (SVNException e) {
+                            if (e!=eureka)
+                                throw e;    // some other problems
+                            // found some changes, keep on integrating
+                        }
+                    }
+                    
                     // capture the working directory state before the switch
                     SVNWCClient wc = cm.getWCClient();
                     SVNInfo wsState = wc.doInfo(mr, null);
@@ -308,7 +335,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
                             return -1L;
                         }
 
-                        String msg = "Rebasing with the integration commit that was just made in rev."+trunkCommit;
+                        String msg = RebaseAction.COMMIT_MESSAGE_PREFIX+"Rebasing with the integration commit that was just made in rev."+trunkCommit;
                         SVNCommitInfo bci = cc.doCommit(new File[]{mr}, false, msg, null, null, false, false, INFINITY);
                         logger.println("  committed revision "+bci.getNewRevision());
                     }
@@ -320,6 +347,12 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
                 }
             }
         });
+    }
+
+    private Long getlastIntegratedRevision() {
+        IntegrateAction ia = IntegrationStatusAction.getLastIntegrateAction(owner);
+        if (ia!=null)   return ia.getIntegratedRevision();
+        return null;
     }
 
     /**
