@@ -5,3 +5,6 @@ target
 experiment/repo
 experiment/ws
 work
+*.idea
+.DS_Store
+
