@@ -75,16 +75,22 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         return r;
     }
 
-    public void doNewBranch(StaplerRequest req, StaplerResponse rsp, @QueryParameter String name, @QueryParameter boolean attach) throws ServletException, IOException {
+    public void doNewBranch(StaplerRequest req, StaplerResponse rsp, @QueryParameter String name, @QueryParameter boolean attach, @QueryParameter String commitMessage) throws ServletException, IOException {
         requirePOST();
 
         name = Util.fixEmptyAndTrim(name);
-
+        
         if (name==null) {
             sendError("Name is required");
             return;
         }
 
+        commitMessage = Util.fixEmptyAndTrim(commitMessage);
+
+        if (commitMessage==null) {
+            commitMessage = "Created a feature branch from Jenkins";
+        }
+        
         SCM scm = project.getScm();
         if (!(scm instanceof SubversionSCM)) {
             sendError("This project doesn't use Subversion as SCM");
@@ -125,7 +131,7 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
                 svnm.getCopyClient().doCopy(
                     svn.getLocations()[0].getSVNURL(), SVNRevision.HEAD,
                     dst, false, true,
-                    "Created a feature branch from Jenkins");
+                    commitMessage);
             } catch (SVNException e) {
                 sendError(e);
                 return;
