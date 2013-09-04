@@ -148,5 +148,5 @@ public class RebaseAction extends AbstractSvnmergeTaskAction<RebaseSetting> {
         }
     }
 
-    public static final String COMMIT_MESSAGE_PREFIX = "[REBASE] ";
+    public static final String COMMIT_MESSAGE_PREFIX = "REBASE ";
 }
