@@ -272,7 +272,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
 
                     // do we have any meaningful changes in this branch worthy of integration?
                     if (lastIntegrationSourceRevision !=null) {
-                        final SVNException eureka = new SVNException(SVNErrorMessage.create(SVNErrorCode.UNKNOWN));
+                        final SVNException eureka = new SVNException(null);
                         try {
                             cm.getLogClient().doLog(new File[]{mr},mergeRev,SVNRevision.create(lastIntegrationSourceRevision),mergeRev,true,false,-1,new ISVNLogEntryHandler() {
                                 public void handleLogEntry(SVNLogEntry e) throws SVNException {
