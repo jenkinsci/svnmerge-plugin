@@ -24,6 +24,8 @@ import org.kohsuke.stapler.StaplerRequest;
 import org.tmatesoft.svn.core.ISVNLogEntryHandler;
 import org.tmatesoft.svn.core.SVNCommitInfo;
 import org.tmatesoft.svn.core.SVNException;
+import org.tmatesoft.svn.core.SVNErrorMessage;
+import org.tmatesoft.svn.core.SVNErrorCode;
 import org.tmatesoft.svn.core.SVNLogEntry;
 import org.tmatesoft.svn.core.SVNURL;
 import org.tmatesoft.svn.core.auth.ISVNAuthenticationProvider;
@@ -270,7 +272,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
 
                     // do we have any meaningful changes in this branch worthy of integration?
                     if (lastIntegrationSourceRevision !=null) {
-                        final SVNException eureka = new SVNException(null);
+                        final SVNException eureka = new SVNException(SVNErrorMessage.create(SVNErrorCode.UNKNOWN));
                         try {
                             cm.getLogClient().doLog(new File[]{mr},mergeRev,SVNRevision.create(lastIntegrationSourceRevision),mergeRev,true,false,-1,new ISVNLogEntryHandler() {
                                 public void handleLogEntry(SVNLogEntry e) throws SVNException {
