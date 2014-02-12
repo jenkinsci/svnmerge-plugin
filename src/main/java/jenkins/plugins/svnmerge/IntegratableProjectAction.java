@@ -133,7 +133,7 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         }
 
         // copy a job, and adjust its properties for integration
-        AbstractProject<?,?> copy = Jenkins.getInstance().copy(project, project.getName() + "-" + name);
+        AbstractProject<?,?> copy = Jenkins.getInstance().copy(project, project.getName() + "-" + name.replaceAll("/", "-"));
         BulkChange bc = new BulkChange(copy);
         try {
             copy.removeProperty(IntegratableProject.class);
