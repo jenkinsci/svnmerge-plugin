@@ -33,6 +33,10 @@ l.layout(norefresh:"true",title:_("title",my.project.displayName)) {
             form (name:"new", method:"post", action:"newBranch") {
                 text(_("Branch Name")+":")
                 input (type:"text", name:"name", width:"30")
+                raw("</br>")
+                text(_("Commit Message")+":")
+                input (type:"text", name:"commitMessage")
+                raw("</br>")
                 f.submit(value:_("Create"))
             }
         }
