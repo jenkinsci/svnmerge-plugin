@@ -30,8 +30,8 @@ public class RebaseBuilder extends Builder {
 
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
-        new RebaseAction(build.getProject()).perform(listener,new RebaseSetting(permalink));
-        return true;
+        long revision = new RebaseAction(build.getProject()).perform(listener,new RebaseSetting(permalink));
+        return (revision >= 0);
     }
 
     @Extension
