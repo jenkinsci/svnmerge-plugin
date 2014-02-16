@@ -99,7 +99,8 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
 
         // TODO: check for multiple locations
         SubversionSCM svn = (SubversionSCM) scm;
-        String url = svn.getLocations()[0].getURL();
+        ModuleLocation firstLocation = svn.getLocations()[0];
+		String url = firstLocation.getURL();
         Matcher m = KEYWORD.matcher(url);
         if(!m.find()) {
             sendError("Unable to infer the new branch name from "+url);
@@ -129,7 +130,7 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
 
                 // create a branch
                 svnm.getCopyClient().doCopy(
-                    svn.getLocations()[0].getSVNURL(), SVNRevision.HEAD,
+                    firstLocation.getSVNURL(), SVNRevision.HEAD,
                     dst, false, true,
                     commitMessage);
             } catch (SVNException e) {
@@ -148,7 +149,7 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
             SubversionSCM svnScm = (SubversionSCM)copy.getScm();
             copy.setScm(
                     new SubversionSCM(
-                            Arrays.asList(new ModuleLocation(url,null)),
+                            Arrays.asList(new ModuleLocation(url,firstLocation.getLocalDir())),
                                 svnScm.getWorkspaceUpdater(), svnScm.getBrowser(),
                                 svnScm.getExcludedRegions(),
                                 svnScm.getExcludedUsers(),
