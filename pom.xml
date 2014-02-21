@@ -13,6 +13,13 @@
   <name>Jenkins svnmerge plugin</name>
   <url>https://wiki.jenkins-ci.org/display/JENKINS/Subversion+Merge+Plugin</url>
 
+  <developers>
+    <developer>
+      <id>hugueschabot</id>
+      <name>Hugues Chabot</name>
+    </developer>
+  </developers>
+  
   <dependencies>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
