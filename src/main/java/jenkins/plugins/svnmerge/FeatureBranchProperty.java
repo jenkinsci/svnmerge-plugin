@@ -42,6 +42,7 @@ import org.tmatesoft.svn.core.wc.SVNWCClient;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -58,7 +59,9 @@ import static org.tmatesoft.svn.core.wc.SVNRevision.*;
  *
  * @author Kohsuke Kawaguchi
  */
-public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
+public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> implements Serializable {
+    private static final long serialVersionUID = -1L; 
+    
     /**
      * Upstream job name.
      */
@@ -146,6 +149,8 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
     public long rebase(final TaskListener listener, final long upstreamRev) throws IOException, InterruptedException {
         final ISVNAuthenticationProvider provider = Jenkins.getInstance().getDescriptorByType(
                 SubversionSCM.DescriptorImpl.class).createAuthenticationProvider();
+        final ModuleLocation upstreamLocation = getUpstreamSubversionLocation();
+        
         return owner.getModuleRoot().act(new FileCallable<Long>() {
             public Long invoke(File mr, VirtualChannel virtualChannel) throws IOException {
                 try {
@@ -160,7 +165,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
                         }
                     };
 
-                    SVNURL up = getUpstreamURL();
+                    SVNURL up = upstreamLocation == null ? null : upstreamLocation.getSVNURL();
                     SVNClientManager cm = SubversionSCM.createSvnClientManager(provider);
                     cm.setEventHandler(printHandler);
 
@@ -202,7 +207,9 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
     /**
      * Represents the result of integration.
      */
-    public static class IntegrationResult {
+    public static class IntegrationResult implements Serializable {
+        private static final long serialVersionUID = -1L; 
+
         /**
          * The merge commit in the upstream where the integration is made visible to the upstream.
          * Or 0 if the integration was no-op and no commit was made.
@@ -244,6 +251,8 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
 
         final ISVNAuthenticationProvider provider = Jenkins.getInstance().getDescriptorByType(
                 SubversionSCM.DescriptorImpl.class).createAuthenticationProvider();
+        final ModuleLocation upstreamLocation = getUpstreamSubversionLocation();
+
         return owner.getModuleRoot().act(new FileCallable<IntegrationResult>() {
             public IntegrationResult invoke(File mr, VirtualChannel virtualChannel) throws IOException {
                 try {
@@ -258,7 +267,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
                         }
                     };
 
-                    SVNURL up = getUpstreamURL();
+                    SVNURL up = upstreamLocation == null ? null : upstreamLocation.getSVNURL();
                     SVNClientManager cm = SubversionSCM.createSvnClientManager(provider);
                     cm.setEventHandler(printHandler);
 
