@@ -15,14 +15,17 @@ import hudson.remoting.VirtualChannel;
 import hudson.scm.SCM;
 import hudson.scm.SubversionEventHandlerImpl;
 import hudson.scm.SubversionSCM;
+import hudson.scm.SvnClientManager;
 import hudson.scm.SubversionSCM.ModuleLocation;
 import hudson.util.IOException2;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
+
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.tmatesoft.svn.core.ISVNLogEntryHandler;
 import org.tmatesoft.svn.core.SVNCommitInfo;
+import org.tmatesoft.svn.core.SVNErrorMessage;
 import org.tmatesoft.svn.core.SVNException;
 import org.tmatesoft.svn.core.SVNLogEntry;
 import org.tmatesoft.svn.core.SVNURL;
@@ -147,8 +150,9 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
      *      (typically this means a merge conflict.)
      */
     public long rebase(final TaskListener listener, final long upstreamRev) throws IOException, InterruptedException {
-        final ISVNAuthenticationProvider provider = Jenkins.getInstance().getDescriptorByType(
-                SubversionSCM.DescriptorImpl.class).createAuthenticationProvider();
+        final SubversionSCM svn = (SubversionSCM) getOwner().getScm();
+        final ISVNAuthenticationProvider provider = svn.createAuthenticationProvider(getOwner(), svn.getLocations()[0]);
+
         final ModuleLocation upstreamLocation = getUpstreamSubversionLocation();
         
         return owner.getModuleRoot().act(new FileCallable<Long>() {
@@ -165,8 +169,10 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
                         }
                     };
 
-                    SVNURL up = upstreamLocation == null ? null : upstreamLocation.getSVNURL();
-                    SVNClientManager cm = SubversionSCM.createSvnClientManager(provider);
+                    SvnClientManager svnm = SubversionSCM.createClientManager(provider);
+
+					SVNURL up = upstreamLocation == null ? null : upstreamLocation.getSVNURL();
+                    SVNClientManager cm = svnm.getCore();
                     cm.setEventHandler(printHandler);
 
                     SVNWCClient wc = cm.getWCClient();
@@ -249,10 +255,11 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
     public IntegrationResult integrate(final TaskListener listener, final String branchURL, final long branchRev, final String commitMessage) throws IOException, InterruptedException {
         final Long lastIntegrationSourceRevision = getlastIntegrationSourceRevision();
 
-        final ISVNAuthenticationProvider provider = Jenkins.getInstance().getDescriptorByType(
-                SubversionSCM.DescriptorImpl.class).createAuthenticationProvider();
-        final ModuleLocation upstreamLocation = getUpstreamSubversionLocation();
+        final SubversionSCM svn = (SubversionSCM) getUpstreamProject().getScm();
+        final ISVNAuthenticationProvider provider = svn.createAuthenticationProvider(getUpstreamProject(), svn.getLocations()[0]);
 
+        final ModuleLocation upstreamLocation = getUpstreamSubversionLocation();
+        
         return owner.getModuleRoot().act(new FileCallable<IntegrationResult>() {
             public IntegrationResult invoke(File mr, VirtualChannel virtualChannel) throws IOException {
                 try {
@@ -267,8 +274,10 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
                         }
                     };
 
-                    SVNURL up = upstreamLocation == null ? null : upstreamLocation.getSVNURL();
-                    SVNClientManager cm = SubversionSCM.createSvnClientManager(provider);
+                    SvnClientManager svnm = SubversionSCM.createClientManager(provider);
+
+					SVNURL up = upstreamLocation == null ? null : upstreamLocation.getSVNURL();
+                    SVNClientManager cm = svnm.getCore();
                     cm.setEventHandler(printHandler);
 
                     // capture the working directory state before the switch
@@ -279,7 +288,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
 
                     // do we have any meaningful changes in this branch worthy of integration?
                     if (lastIntegrationSourceRevision !=null) {
-                        final SVNException eureka = new SVNException(null);
+                        final SVNException eureka = new SVNException(SVNErrorMessage.UNKNOWN_ERROR_MESSAGE);
                         try {
                             cm.getLogClient().doLog(new File[]{mr},mergeRev,SVNRevision.create(lastIntegrationSourceRevision),mergeRev,true,false,-1,new ISVNLogEntryHandler() {
                                 public void handleLogEntry(SVNLogEntry e) throws SVNException {
