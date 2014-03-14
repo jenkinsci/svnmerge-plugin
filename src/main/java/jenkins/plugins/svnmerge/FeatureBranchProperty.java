@@ -21,6 +21,7 @@ import hudson.util.IOException2;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 
+import org.apache.commons.lang.mutable.MutableBoolean;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.tmatesoft.svn.core.ISVNLogEntryHandler;
@@ -288,23 +289,23 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
 
                     // do we have any meaningful changes in this branch worthy of integration?
                     if (lastIntegrationSourceRevision !=null) {
-                        final SVNException eureka = new SVNException(SVNErrorMessage.UNKNOWN_ERROR_MESSAGE);
-                        try {
-                            cm.getLogClient().doLog(new File[]{mr},mergeRev,SVNRevision.create(lastIntegrationSourceRevision),mergeRev,true,false,-1,new ISVNLogEntryHandler() {
-                                public void handleLogEntry(SVNLogEntry e) throws SVNException {
-                                    if (e.getMessage().startsWith(RebaseAction.COMMIT_MESSAGE_PREFIX)
-                                     || e.getMessage().startsWith(IntegrateAction.COMMIT_MESSAGE_PREFIX))
-                                        return; // merge commits
-                                    throw eureka;
+                    	final MutableBoolean changesFound = new MutableBoolean(false);
+                        cm.getLogClient().doLog(new File[]{mr},mergeRev,SVNRevision.create(lastIntegrationSourceRevision),mergeRev,true,false,-1,new ISVNLogEntryHandler() {
+                            public void handleLogEntry(SVNLogEntry e) throws SVNException {
+                                if (!changesFound.booleanValue()) {
+                                	String message = e.getMessage();
+                                	
+                                    if (!message.startsWith(RebaseAction.COMMIT_MESSAGE_PREFIX)
+                                    		&& !message.startsWith(IntegrateAction.COMMIT_MESSAGE_PREFIX)) {
+                                    	changesFound.setValue(true);
+                                    }
                                 }
-                            });
-                            // didn't find anything interesting. all the changes are our merges
-                            logger.println("No changes to be integrated. Skipping integration.");
-                            return new IntegrationResult(0,mergeRev);
-                        } catch (SVNException e) {
-                            if (e!=eureka)
-                                throw e;    // some other problems
-                            // found some changes, keep on integrating
+                            }
+                        });
+                        // didn't find anything interesting. all the changes are our merges
+                        if (!changesFound.booleanValue()) {
+	                        logger.println("No changes to be integrated. Skipping integration.");
+	                        return new IntegrationResult(0,mergeRev);
                         }
                     }
                     
