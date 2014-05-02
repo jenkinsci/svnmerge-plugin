@@ -77,10 +77,29 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         }
         return r;
     }
+    
+    /**
+     * 
+     * @return
+     */
+    public RepositoryLayoutInfo getRepositoryLayout() {
+    	SCM scm = project.getScm();
+        if (!(scm instanceof SubversionSCM)) {
+            return null;
+        }
+        //TODO: check for multiple locations ?
+        SubversionSCM svn = (SubversionSCM) scm;
+        ModuleLocation firstLocation = svn.getLocations()[0];
+		return new RepositoryLayoutInfo(firstLocation.getURL());
+    }
 
-    public void doNewBranch(StaplerRequest req, StaplerResponse rsp, @QueryParameter String name, @QueryParameter boolean attach, @QueryParameter String commitMessage) throws ServletException, IOException {
+    public void doNewBranch(StaplerRequest req, StaplerResponse rsp, 
+    						@QueryParameter String name, 
+    						@QueryParameter boolean attach, 
+    						@QueryParameter String commitMessage, 
+    						@QueryParameter String defaultNewBranchUrl) throws ServletException, IOException {
         requirePOST();
-
+        
         name = Util.fixEmptyAndTrim(name);
         
         if (name==null) {
@@ -103,6 +122,7 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         // TODO: check for multiple locations
         SubversionSCM svn = (SubversionSCM) scm;
         ModuleLocation firstLocation = svn.getLocations()[0];
+        /*
 		String url = firstLocation.getURL();
         Matcher m = KEYWORD.matcher(url);
         if(!m.find()) {
@@ -110,6 +130,9 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
             return;
         }
         url = url.substring(0,m.start())+"/branches/"+name;
+        */
+        String url = Util.fixEmptyAndTrim(defaultNewBranchUrl)
+							.replace("<new_branch_name>", name);
 
         if(!attach) {
             SvnClientManager svnm = SubversionSCM.createClientManager(
