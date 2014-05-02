@@ -14,13 +14,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import javax.servlet.ServletException;
 
 import jenkins.model.Jenkins;
 
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
@@ -97,7 +96,12 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
     						@QueryParameter String name, 
     						@QueryParameter boolean attach, 
     						@QueryParameter String commitMessage, 
-    						@QueryParameter String defaultNewBranchUrl) throws ServletException, IOException {
+    						@QueryParameter String defaultNewBranchUrl,
+    						@QueryParameter String defaultNewDevTagUrl,
+    						@QueryParameter String branchLocation,
+    						@QueryParameter boolean createTag,
+    						@QueryParameter String tagLocation,
+    						@QueryParameter RepositoryLayoutEnum layout) throws ServletException, IOException {
         requirePOST();
         
         name = Util.fixEmptyAndTrim(name);
@@ -110,7 +114,22 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         commitMessage = Util.fixEmptyAndTrim(commitMessage);
 
         if (commitMessage==null) {
-            commitMessage = "Created a feature branch from Jenkins";
+            commitMessage = "Created a feature branch from Jenkins with name: "+name;
+        }
+        
+        branchLocation =  Util.fixEmptyAndTrim(branchLocation);
+        tagLocation = Util.fixEmptyAndTrim(tagLocation);
+        if (layout == RepositoryLayoutEnum.CUSTOM) {
+        	/*
+        	 * in case of custom layout the user must provide the full new branch url
+        	 * (and optionally the full new tag url)
+        	 */
+        	if (StringUtils.isEmpty(branchLocation)) {
+        		sendError("Branch Location is required for custom repository layout");
+        	}
+        	if (createTag && StringUtils.isEmpty(tagLocation)) {
+        		sendError("Tag Location is required for custom repository layout");
+        	}
         }
         
         SCM scm = project.getScm();
@@ -122,48 +141,34 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         // TODO: check for multiple locations
         SubversionSCM svn = (SubversionSCM) scm;
         ModuleLocation firstLocation = svn.getLocations()[0];
-        /*
-		String url = firstLocation.getURL();
-        Matcher m = KEYWORD.matcher(url);
-        if(!m.find()) {
-            sendError("Unable to infer the new branch name from "+url);
-            return;
+
+        defaultNewBranchUrl = Util.fixEmptyAndTrim(defaultNewBranchUrl);
+        defaultNewDevTagUrl = Util.fixEmptyAndTrim(defaultNewDevTagUrl);
+        List<String> urlsToCopyTo = new ArrayList<String>();
+        String branchUrl;
+        if (StringUtils.isNotEmpty(branchLocation)) {
+        	//using override value
+        	branchUrl = branchLocation;
+        } else {
+        	//using default value
+        	branchUrl = defaultNewBranchUrl.replace("<new_branch_name>", name);
         }
-        url = url.substring(0,m.start())+"/branches/"+name;
-        */
-        String url = Util.fixEmptyAndTrim(defaultNewBranchUrl)
-							.replace("<new_branch_name>", name);
+        urlsToCopyTo.add(branchUrl);
+        
+        if (createTag) {
+        	String tagUrl;
+        	if (StringUtils.isNotEmpty(tagLocation)) {
+        		//using override value
+        		tagUrl = tagLocation;
+        	} else {
+        		//using default value
+        		tagUrl = defaultNewDevTagUrl.replace("<new_branch_name>", name);
+        	}
+        	urlsToCopyTo.add(tagUrl);
+        }
 
         if(!attach) {
-            SvnClientManager svnm = SubversionSCM.createClientManager(
-            		svn.createAuthenticationProvider(project, firstLocation));
-            try {
-                SVNURL dst = SVNURL.parseURIEncoded(url);
-
-                // check if the branch already exists
-                try {
-                    SVNInfo info = svnm.getWCClient().doInfo(dst, SVNRevision.HEAD, SVNRevision.HEAD);
-                    if(info.getKind()== SVNNodeKind.DIR) {
-                        // ask the user if we should attach
-                        req.getView(this,"_attach.jelly").forward(req,rsp);
-                        return;
-                    } else {
-                        sendError(info.getURL()+" already exists.");
-                        return;
-                    }
-                } catch (SVNException e) {
-                    // path doesn't exist, which is good
-                }
-
-                // create a branch
-                svnm.getCopyClient().doCopy(
-                    firstLocation.getSVNURL(), SVNRevision.HEAD,
-                    dst, false, true,
-                    commitMessage);
-            } catch (SVNException e) {
-                sendError(e);
-                return;
-            }
+			createSVNCopy(scm, urlsToCopyTo, commitMessage, req, rsp);
         }
 
         // copy a job, and adjust its properties for integration
@@ -176,7 +181,7 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
             SubversionSCM svnScm = (SubversionSCM)copy.getScm();
             copy.setScm(
                     new SubversionSCM(
-                            Arrays.asList(firstLocation.withRemote(url)),
+                            Arrays.asList(firstLocation.withRemote(branchUrl)),
                                 svnScm.getWorkspaceUpdater(),
                                 svnScm.getBrowser(),
                                 svnScm.getExcludedRegions(),
@@ -195,5 +200,57 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         rsp.sendRedirect2(req.getContextPath()+"/"+copy.getUrl());
     }
 
-    private static final Pattern KEYWORD = Pattern.compile("/(trunk(/|$)|branches/)");
+    /**
+     * Utility method for SVN copies creation.
+     * First checks if all the given urls already exist; if any exist, creates a copy for each of them.
+     * @param scm the project scm
+     * @param urlsToCopyTo a list of urls to copy to (i.e. where the copies'll be created).
+     * @param commitMessage the commit message to use
+     * @param req the original StaplerRequest
+     * @param rsp the original StaplerResponse
+     * @throws ServletException
+     * @throws IOException
+     */
+    private void createSVNCopy(SCM scm, List<String> urlsToCopyTo, String commitMessage, 
+    						   StaplerRequest req, StaplerResponse rsp) throws ServletException, IOException {
+    	SubversionSCM svn = (SubversionSCM) scm;
+        ModuleLocation firstLocation = svn.getLocations()[0];
+         
+    	SvnClientManager svnm = SubversionSCM.createClientManager(
+        		svn.createAuthenticationProvider(project, firstLocation));
+        try {
+
+            // check if each of the given svn url already exists
+            for (String urlToCopyTo : urlsToCopyTo) {
+            	SVNURL dst = SVNURL.parseURIEncoded(urlToCopyTo);
+            	try {
+            		SVNInfo info = svnm.getWCClient().doInfo(dst, SVNRevision.HEAD, SVNRevision.HEAD);
+            		if(info.getKind()== SVNNodeKind.DIR) {
+            			// ask the user if we should attach
+            			req.getView(this,"_attach.jelly").forward(req,rsp);
+            			return;
+            		} else {
+            			sendError(info.getURL()+" already exists.");
+            			return;
+            		}
+            	} catch (SVNException e) {
+            		// path doesn't exist, which is good
+            	}
+			}
+           
+            // create the copies in the given urls
+            for (String urlToCopyTo : urlsToCopyTo) {
+            	SVNURL dst = SVNURL.parseURIEncoded(urlToCopyTo);
+            	svnm.getCopyClient().doCopy(
+            			firstLocation.getSVNURL(), SVNRevision.HEAD,
+            			dst, false, true,
+            			commitMessage);
+			}
+
+        } catch (SVNException e) {
+            sendError(e);
+        	return;
+        }
+	}
+
 }
