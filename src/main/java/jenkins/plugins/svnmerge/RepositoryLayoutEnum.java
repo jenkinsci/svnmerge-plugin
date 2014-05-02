@@ -27,6 +27,10 @@ public enum RepositoryLayoutEnum {
 	private RepositoryLayoutEnum(String description) {
 		this.description = description;
 	}
+	
+	public String getName() {
+		return this.name();
+	}
 
 	@Override
 	public String toString() {
