@@ -19,6 +19,8 @@ l.layout (norefresh:true, title:"Feature Branches of ${my.project.displayName}")
                 raw(_("attachTest", n))
                 input(type:"hidden",name:"name", value:n)
                 input(type:"hidden",name:"attach", value:"true")
+                input(type:"hidden",name:"commitMessage", value:request.getParameter('commitMessage'))
+                input(type:"hidden",name:"defaultNewBranchUrl", value:request.getParameter('defaultNewBranchUrl'))
 
                 f.submit(value:_("Yes"))
             }
