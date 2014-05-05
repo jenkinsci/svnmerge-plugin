@@ -22,16 +22,22 @@ public class RebaseBuilder extends Builder {
      * {@link Permalink#getId() id} of the permalink to rebase with.
      */
     public final String permalink;
+    /**
+     * Indicates whether to stop the build if the merge fails. 
+     */
+    public final boolean stopBuildIfMergeFails;
 
     @DataBoundConstructor
-    public RebaseBuilder(String permalink) {
+    public RebaseBuilder(String permalink, boolean stopBuildIfMergeFails) {
         this.permalink = permalink;
+        this.stopBuildIfMergeFails = stopBuildIfMergeFails;
     }
 
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
-        new RebaseAction(build.getProject()).perform(listener,new RebaseSetting(permalink));
-        return true;
+    	RebaseAction rebaseAction = new  RebaseAction(build.getProject());
+    	long result = rebaseAction.perform(listener,new RebaseSetting(permalink));
+        return !stopBuildIfMergeFails || result >= 0;
     }
 
     @Extension
