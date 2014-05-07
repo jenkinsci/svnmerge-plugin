@@ -51,58 +51,58 @@ l.layout(norefresh:"true",title:_("title",my.project.displayName)) {
         p {
             form (name:"new", method:"post", action:"newBranch") {
 				
-				raw("<table>")
-				
-				raw("<tr>")
-				raw("<td>")
-				text(_("Branch Name")+":")
-				raw("</td>")
-				raw("<td>")
-				input (type:"text", name:"name", width:"30")
-				raw("</td>")
-				raw("</tr>")
-				
-				raw("<tr>")
-				raw("<td>")
-				text(_("Commit Message")+":")
-				raw("</td>")
-				raw("<td>")
-				input (type:"text", name:"commitMessage")
-				raw("</td>")
-				raw("</tr>")
-				
-				raw("<tr>")
-				raw("<td>")
-				text(_("Override default branch location")+":")
-				raw("</td>")
-				raw("<td>")
-				input (type:"text", name:"branchLocation", width:"90")
-				raw("</td>")
-				raw("</tr>")
-				
-				raw("<tr>")
-				raw("<td>")
-				text(_("Create a development tag")+":")
-				raw("</td>")
-				raw("<td>")
-				input (type:"checkbox", name:"createTag", width:"30")
-				raw("</td>")
-				raw("</tr>")
-				
-				raw("<tr>")
-				raw("<td>")
-				text(_("Override default tag location")+":")
-				raw("</td>")
-				raw("<td>")
-				input (type:"text", name:"tagLocation")
-				raw("</td>")
-				raw("</tr>")
-				
-				raw("</table>")
-				
-				input (type:"hidden", name:"defaultNewBranchUrl", value: repoLayout.defaultNewBranchUrl)
-				input (type:"hidden", name:"defaultNewDevTagUrl", value: repoLayout.defaultNewDevTagUrl)
-				input (type:"hidden", name:"layout", 			  value: repoLayout.layout.name)
+                table {
+
+                    tr {
+                        td {
+                            text(_("Branch Name")+":")
+                        }
+                        td {
+                            input (type:"text", name:"name", width:"30")
+                        }
+                    }
+                
+                    tr {
+                        td {
+                            text(_("Commit Message")+":")
+                        }
+                        td {
+                            input (type:"text", name:"commitMessage")
+                        }
+                    }
+                
+                    tr {
+                        td {
+                            text(_("Override default branch location")+":")
+                        }
+                        td {
+                            input (type:"text", name:"branchLocation", width:"90")
+                        }
+                    }
+                
+                    tr {
+                        td {
+                            text(_("Create a development tag")+":")
+                        }
+                        td {
+                            input (type:"checkbox", name:"createTag", width:"30")
+                        }
+                    }
+                
+                    tr {
+                        td {
+                            text(_("Override default tag location")+":")
+                        }
+                        td {
+                            input (type:"text", name:"tagLocation")
+                        }
+                    }
+                
+                }
+                
+                input (type:"hidden", name:"defaultNewBranchUrl", value: repoLayout.defaultNewBranchUrl)
+                input (type:"hidden", name:"defaultNewDevTagUrl", value: repoLayout.defaultNewDevTagUrl)
+                input (type:"hidden", name:"layout", 			  value: repoLayout.layout.name)
 				
                 f.submit(value:_("Create"))
             }
