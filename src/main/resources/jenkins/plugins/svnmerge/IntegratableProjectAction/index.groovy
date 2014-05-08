@@ -122,7 +122,7 @@ l.layout(norefresh:"true",title:_("title",my.project.displayName)) {
                 
                 }
                 
-                input (type:"hidden", name:"layout", 			  value: repoLayout.layout.name)
+                input (type:"hidden", name:"layout", value: repoLayout.layout.name)
 				
                 f.submit(value:_("Create"))
             }
