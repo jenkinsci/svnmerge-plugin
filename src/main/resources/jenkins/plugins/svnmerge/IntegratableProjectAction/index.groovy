@@ -48,80 +48,80 @@ l.layout(norefresh:"true",title:_("title",my.project.displayName)) {
                 table (width: "100%") {
 
                     tr {
-                        td (width: "25%") {
+                        td (class: "setting-leftspace")
+                        td (class: "setting-name") {
                             text(_("Branch Name")+":")
                         }
-                        td {
-                            input (type:"text", name:"name", size:"90")
+                        td (class: "setting-main") {
+                            input (type: "text", name: "name", class:"setting-input")
                         }
                     }
-                
+  
                     tr {
-                        td {
+                        td (class: "setting-leftspace")
+                        td (class: "setting-name") {
                             text(_("Commit Message")+":")
                         }
-                        td {
-                            input (type:"text", name:"commitMessage", size:"90")
+                        td (class: "setting-main") {
+                            input (type:"text", name:"commitMessage", class:"setting-input")
                         }
                     }
 					
-					tr {
-						td {
-							text(_("Default new branch location")+":")
-						}
-						td {
-							def value = repoLayout.defaultNewBranchUrl
-							if (repoLayout.layout==CUSTOM) {
-								value = _("unableToDetect","branches")
-							}
-							input (type:"text", name:"defaultNewBranchUrl", size:"90",
-								   disabled: true, value: value)
-						}
-					}
-                
                     tr {
-                        td {
-                             text(_("override", "branch")+":")
+                        td (class: "setting-leftspace")
+                        td (class: "setting-name") {
+                             text(_("Branch location")+":")
                         }
-                        td {
-                            input (type:"text", name:"branchLocation", size:"90")
+                        td (class: "setting-main") {
+                            input (type:"text", name:"branchLocation", class:"setting-input")
                         }
+                    }
+                				
+                    if (repoLayout.defaultNewBranchUrl) {
+                    
+                        tr {
+                            td (colspan: 2)
+                            td (class: "setting-description") {
+                                text(_("leaveBlankToUseDefault", repoLayout.defaultNewBranchUrl))
+                            }
+                        }
+                    
                     }
                 
                     tr {
-                        td {
-                            text(_("Create a development tag")+":")
-                        }
-                        td {
-                            input (type:"checkbox", name:"createTag", width:"90")
+                        td (colspan: 3) {
+                            input (type: "checkbox", name: "createTag")
+                            label (class: "attach-previous") {
+                                text(_("Create a development tag"))
+                            }
                         }
                     }
-					
-					tr {
-						td {
-							text(_("Default new tag location")+":")
-						}
-						td {
-							def value = repoLayout.defaultNewDevTagUrl
-							if (repoLayout.layout==CUSTOM) {
-								value = _("unableToDetect","tags")
-							}
-							input (type:"text", name:"defaultNewDevTagUrl", size:"90",
-								   disabled: true, value: value)
-						}
-					}
-                
+
                     tr {
-                        td {
-                            text(_("override", "tag")+":")
+                        td (class: "setting-leftspace")
+                        td (class: "setting-name") {
+                            text(_("Tag location")+":")
                         }
-                        td {
-                            input (type:"text", name:"tagLocation", size:"90")
+                        td (class: "setting-main") {
+                            input (type:"text", name:"tagLocation", class:"setting-input")
                         }
+                    }
+                				
+                    if (repoLayout.defaultNewDevTagUrl) {
+                    
+                        tr {
+                            td (colspan: 2)
+                            td (class: "setting-description") {
+                                text(_("leaveBlankToUseDefault", repoLayout.defaultNewDevTagUrl))
+                            }
+                        }
+                    
                     }
                 
                 }
                 
+                input (type:"hidden", name:"defaultNewBranchUrl", value: repoLayout.defaultNewBranchUrl)
+                input (type:"hidden", name:"defaultNewDevTagUrl", value: repoLayout.defaultNewDevTagUrl)
                 input (type:"hidden", name:"layout", value: repoLayout.layout.name)
 				
                 f.submit(value:_("Create"))
