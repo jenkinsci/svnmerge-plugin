@@ -167,5 +167,12 @@ public class RepositoryLayoutInfoTest {
 		assertEquals(RepositoryLayoutEnum.CUSTOM, repoLayout.getLayout());
 		assertEquals(scmModuleLocation, repoLayout.getScmModuleLocation());
 		assertNull(repoLayout.getSubProjectName());
+
+		//custom layout
+		scmModuleLocation = "svn://localhost/repo/trunk/project/subproject";
+		repoLayout = new RepositoryLayoutInfo(scmModuleLocation);
+		assertEquals(RepositoryLayoutEnum.CUSTOM, repoLayout.getLayout());
+		assertEquals(scmModuleLocation, repoLayout.getScmModuleLocation());
+		assertNull(repoLayout.getSubProjectName());
 	}
 }
