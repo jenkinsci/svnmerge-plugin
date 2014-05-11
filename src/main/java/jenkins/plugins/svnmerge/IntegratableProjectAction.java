@@ -89,19 +89,20 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         //TODO: check for multiple locations ?
         SubversionSCM svn = (SubversionSCM) scm;
         ModuleLocation firstLocation = svn.getLocations()[0];
-		return new RepositoryLayoutInfo(firstLocation.getURL());
+		return getRepositoryLayout(firstLocation);
+    }
+
+    private RepositoryLayoutInfo getRepositoryLayout(ModuleLocation location) {
+		return new RepositoryLayoutInfo(location.getURL());
     }
 
     public void doNewBranch(StaplerRequest req, StaplerResponse rsp, 
     						@QueryParameter String name, 
     						@QueryParameter boolean attach, 
     						@QueryParameter String commitMessage, 
-    						@QueryParameter String defaultNewBranchUrl,
-    						@QueryParameter String defaultNewDevTagUrl,
     						@QueryParameter String branchLocation,
     						@QueryParameter boolean createTag,
-    						@QueryParameter String tagLocation,
-    						@QueryParameter RepositoryLayoutEnum layout) throws ServletException, IOException {
+    						@QueryParameter String tagLocation) throws ServletException, IOException {
         requirePOST();
         
         name = Util.fixEmptyAndTrim(name);
@@ -117,9 +118,21 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
             commitMessage = "Created a feature branch from Jenkins with name: "+name;
         }
         
+        SCM scm = project.getScm();
+        if (!(scm instanceof SubversionSCM)) {
+            sendError("This project doesn't use Subversion as SCM");
+            return;
+        }
+
+        // TODO: check for multiple locations
+        SubversionSCM svn = (SubversionSCM) scm;
+        ModuleLocation firstLocation = svn.getLocations()[0];
+        
+        RepositoryLayoutInfo layoutInfo = getRepositoryLayout(firstLocation);
+
         branchLocation =  Util.fixEmptyAndTrim(branchLocation);
         tagLocation = Util.fixEmptyAndTrim(tagLocation);
-        if (layout == RepositoryLayoutEnum.CUSTOM) {
+        if (layoutInfo.getLayout() == RepositoryLayoutEnum.CUSTOM) {
         	/*
         	 * in case of custom layout the user must provide the full new branch url
         	 * (and optionally the full new tag url)
@@ -131,19 +144,7 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         		sendError("Tag Location is required for custom repository layout");
         	}
         }
-        
-        SCM scm = project.getScm();
-        if (!(scm instanceof SubversionSCM)) {
-            sendError("This project doesn't use Subversion as SCM");
-            return;
-        }
 
-        // TODO: check for multiple locations
-        SubversionSCM svn = (SubversionSCM) scm;
-        ModuleLocation firstLocation = svn.getLocations()[0];
-
-        defaultNewBranchUrl = Util.fixEmptyAndTrim(defaultNewBranchUrl);
-        defaultNewDevTagUrl = Util.fixEmptyAndTrim(defaultNewDevTagUrl);
         List<String> urlsToCopyTo = new ArrayList<String>();
         String branchUrl;
         if (StringUtils.isNotEmpty(branchLocation)) {
@@ -151,7 +152,7 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         	branchUrl = branchLocation;
         } else {
         	//using default value
-        	branchUrl = defaultNewBranchUrl.replace("<new_branch_name>", name);
+        	branchUrl = layoutInfo.getDefaultNewBranchUrl().replace("<new_branch_name>", name);
         }
         urlsToCopyTo.add(branchUrl);
         
@@ -162,12 +163,12 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         		tagUrl = tagLocation;
         	} else {
         		//using default value
-        		tagUrl = defaultNewDevTagUrl.replace("<new_branch_name>", name);
+        		tagUrl = layoutInfo.getDefaultNewDevTagUrl().replace("<new_branch_name>", name);
         	}
         	urlsToCopyTo.add(tagUrl);
         }
 
-        if(!attach) {
+        if (!attach) {
 			createSVNCopy(scm, urlsToCopyTo, commitMessage, req, rsp);
         }
 
