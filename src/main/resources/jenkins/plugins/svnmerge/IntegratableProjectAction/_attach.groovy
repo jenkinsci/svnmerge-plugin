@@ -16,12 +16,19 @@ l.layout (norefresh:true, title:"Feature Branches of ${my.project.displayName}")
         p {
             form (name:"new", method:"post", action:"newBranch") {
                 def n = request.getParameter('name')
+                def msg = request.getParameter('commitMessage')
+                def loc = request.getParameter('branchLocation')
                 raw(_("attachTest", n))
                 input(type:"hidden",name:"name", value:n)
                 input(type:"hidden",name:"attach", value:"true")
+                input(type:"hidden",name:"commitMessage", value:msg)
+                input(type:"hidden",name:"branchLocation", value:loc)
 
                 f.submit(value:_("Yes"))
             }
         }
+		if (request.getParameter('createTag')) {
+			p(_("tagInfo"))
+		}
     }
 }
