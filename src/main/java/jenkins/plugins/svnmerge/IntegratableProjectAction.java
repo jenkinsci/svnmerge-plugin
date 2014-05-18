@@ -141,7 +141,7 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         	if (StringUtils.isEmpty(branchLocation)) {
         		sendError("Branch Location is required for custom repository layout");
         	}
-        	if (createTag && StringUtils.isEmpty(tagLocation)) {
+        	if (!attach && createTag && StringUtils.isEmpty(tagLocation)) {
         		sendError("Tag Location is required for custom repository layout");
         	}
         }
@@ -248,27 +248,6 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
     						   String commitMessage, StaplerRequest req, StaplerResponse rsp) throws ServletException, IOException {
          
         try {
-
-        	/*
-            // check if each of the given svn url already exists
-            for (String urlToCopyTo : urlsToCopyTo) {
-            	SVNURL dst = SVNURL.parseURIEncoded(urlToCopyTo);
-            	try {
-            		SVNInfo info = svnm.getWCClient().doInfo(dst, SVNRevision.HEAD, SVNRevision.HEAD);
-            		if(info.getKind()== SVNNodeKind.DIR) {
-            			// ask the user if we should attach
-            			req.getView(this,"_attach.jelly").forward(req,rsp);
-            			return;
-            		} else {
-            			sendError(info.getURL()+" already exists.");
-            			return;
-            		}
-            	} catch (SVNException e) {
-            		// path doesn't exist, which is good
-            	}
-			}
-			*/
-           
             for (String urlToCopyTo : urlsToCopyTo) {
             	SVNURL dst = SVNURL.parseURIEncoded(urlToCopyTo);
             	svnMgr.getCopyClient().doCopy(originalLocation.getSVNURL(), 
@@ -279,10 +258,10 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
             								  commitMessage
             								  );
 			}
-            return Boolean.TRUE;
+            return true;
         } catch (SVNException e) {
             sendError(e);
-        	return Boolean.FALSE;
+        	return false;
         }
 	}
 
