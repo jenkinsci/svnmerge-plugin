@@ -50,11 +50,13 @@ public class RepositoryLayoutInfo {
 			subProject = branchesMatcher.group(GROUP_INDEX);
 			urlBuilder.append(scmModuleLocation.substring(0, branchesMatcher.start()));
 		}
-		urlBuilder.append(ROOT_URL_SUFFIX);
-		if (StringUtils.isNotEmpty(subProject)) {
-			urlBuilder.append(subProject);
-			urlBuilder.append("/");
-		}
+                if (urlBuilder.length() > 0) {
+                        urlBuilder.append(ROOT_URL_SUFFIX);
+                        if (StringUtils.isNotEmpty(subProject)) {
+                                urlBuilder.append(subProject);
+                                urlBuilder.append("/");
+                        }
+                }
 		this.defaultNewBranchUrl = urlBuilder.toString();
 		this.defaultNewDevTagUrl = this.defaultNewBranchUrl.replace("/branches/", "/tags/dev/");
 		setupLayout(matched, subProject);
