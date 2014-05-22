@@ -5,3 +5,6 @@ target
 experiment/repo
 experiment/ws
 work
+/.classpath
+/.project
+/.settings

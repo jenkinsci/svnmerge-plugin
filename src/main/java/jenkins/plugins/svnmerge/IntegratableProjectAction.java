@@ -14,13 +14,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import javax.servlet.ServletException;
 
 import jenkins.model.Jenkins;
 
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
@@ -77,100 +76,193 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         }
         return r;
     }
+    
+    /**
+     * 
+     * @return
+     */
+    public RepositoryLayoutInfo getRepositoryLayout() {
+    	SCM scm = project.getScm();
+        if (!(scm instanceof SubversionSCM)) {
+            return null;
+        }
+        //TODO: check for multiple locations ?
+        SubversionSCM svn = (SubversionSCM) scm;
+        ModuleLocation firstLocation = svn.getLocations()[0];
+		return getRepositoryLayout(firstLocation);
+    }
 
-    public void doNewBranch(StaplerRequest req, StaplerResponse rsp, @QueryParameter String name, @QueryParameter boolean attach, @QueryParameter String commitMessage) throws ServletException, IOException {
+    private RepositoryLayoutInfo getRepositoryLayout(ModuleLocation location) {
+		return new RepositoryLayoutInfo(location.getURL());
+    }
+
+    public void doNewBranch(StaplerRequest req, StaplerResponse rsp, 
+    						@QueryParameter String name, 
+    						@QueryParameter boolean attach, 
+    						@QueryParameter String commitMessage, 
+    						@QueryParameter String branchLocation,
+    						@QueryParameter boolean createTag,
+    						@QueryParameter String tagLocation) throws ServletException, IOException {
         requirePOST();
-
+        
         name = Util.fixEmptyAndTrim(name);
         
         if (name==null) {
-            sendError("Name is required");
-            return;
+        	sendError("Name is required");
+        	return;
         }
-
+        
         commitMessage = Util.fixEmptyAndTrim(commitMessage);
-
+        
         if (commitMessage==null) {
-            commitMessage = "Created a feature branch from Jenkins";
+        	//the commit message isn't used when attaching to an existing location
+        	commitMessage = "Created a feature branch from Jenkins with name: "+name;
         }
         
         SCM scm = project.getScm();
         if (!(scm instanceof SubversionSCM)) {
-            sendError("This project doesn't use Subversion as SCM");
-            return;
+        	sendError("This project doesn't use Subversion as SCM");
+        	return;
         }
-
         // TODO: check for multiple locations
         SubversionSCM svn = (SubversionSCM) scm;
         ModuleLocation firstLocation = svn.getLocations()[0];
-		String url = firstLocation.getURL();
-        Matcher m = KEYWORD.matcher(url);
-        if(!m.find()) {
-            sendError("Unable to infer the new branch name from "+url);
-            return;
+        
+        RepositoryLayoutInfo layoutInfo = getRepositoryLayout(firstLocation);
+        
+        branchLocation =  Util.fixEmptyAndTrim(branchLocation);
+        tagLocation = Util.fixEmptyAndTrim(tagLocation);
+        
+        if (layoutInfo.getLayout() == RepositoryLayoutEnum.CUSTOM) {
+        	/*
+        	 * in case of custom layout the user must provide the full new branch url
+        	 * (and optionally the full new tag url)
+        	 */
+        	if (StringUtils.isEmpty(branchLocation)) {
+        		sendError("Branch Location is required for custom repository layout");
+        	}
+        	if (!attach && createTag && StringUtils.isEmpty(tagLocation)) {
+        		sendError("Tag Location is required for custom repository layout");
+        	}
         }
-        url = url.substring(0,m.start())+"/branches/"+name;
-
-        if(!attach) {
-            SvnClientManager svnm = SubversionSCM.createClientManager(
-            		svn.createAuthenticationProvider(project, firstLocation));
-            try {
-                SVNURL dst = SVNURL.parseURIEncoded(url);
-
-                // check if the branch already exists
-                try {
-                    SVNInfo info = svnm.getWCClient().doInfo(dst, SVNRevision.HEAD, SVNRevision.HEAD);
-                    if(info.getKind()== SVNNodeKind.DIR) {
-                        // ask the user if we should attach
-                        req.getView(this,"_attach.jelly").forward(req,rsp);
-                        return;
-                    } else {
-                        sendError(info.getURL()+" already exists.");
-                        return;
-                    }
-                } catch (SVNException e) {
-                    // path doesn't exist, which is good
-                }
-
-                // create a branch
-                svnm.getCopyClient().doCopy(
-                    firstLocation.getSVNURL(), SVNRevision.HEAD,
-                    dst, false, true,
-                    commitMessage);
-            } catch (SVNException e) {
-                sendError(e);
-                return;
-            }
+        
+        String branchUrl;
+        if (StringUtils.isNotEmpty(branchLocation)) {
+        	//using override value
+        	branchUrl = branchLocation;
+        } else {
+        	//using default value
+        	branchUrl = layoutInfo.getDefaultNewBranchUrl().replace("<new_branch_name>", name);
         }
-
-        // copy a job, and adjust its properties for integration
-        AbstractProject<?,?> copy = Jenkins.getInstance().copy(project, project.getName() + "-" + name.replaceAll("/", "-"));
-        BulkChange bc = new BulkChange(copy);
-        try {
-            copy.removeProperty(IntegratableProject.class);
-            ((AbstractProject)copy).addProperty(new FeatureBranchProperty(project.getName())); // pointless cast for working around javac bug as of JDK1.6.0_02
-            // update the SCM config to point to the branch
-            SubversionSCM svnScm = (SubversionSCM)copy.getScm();
-            copy.setScm(
-                    new SubversionSCM(
-                            Arrays.asList(firstLocation.withRemote(url)),
-                                svnScm.getWorkspaceUpdater(),
-                                svnScm.getBrowser(),
-                                svnScm.getExcludedRegions(),
-                                svnScm.getExcludedUsers(),
-                                svnScm.getExcludedRevprop(),
-                                svnScm.getExcludedCommitMessages(),
-                                svnScm.getIncludedRegions(),
-                                svnScm.isIgnoreDirPropChanges(),
-                                svnScm.isFilterChangelog(),
-                                svnScm.getAdditionalCredentials()
-                            ));
-        } finally {
-            bc.commit();
+        
+        if (!attach) {
+        	SvnClientManager svnMgr = SubversionSCM.createClientManager(
+        			svn.createAuthenticationProvider(project, firstLocation));
+        	
+	        List<String> urlsToCopyTo = new ArrayList<String>();
+	        SVNURL svnUrl = null;
+	    	try {
+	    		svnUrl = SVNURL.parseURIEncoded(branchUrl);
+	    		SVNInfo info = svnMgr.getWCClient().doInfo(svnUrl, SVNRevision.HEAD, SVNRevision.HEAD);
+	    		if(info.getKind()== SVNNodeKind.DIR) {
+	    			// ask the user if we should attach
+	    			req.getView(this,"_attach.jelly").forward(req,rsp);
+	    			return;
+	    		} else {
+	    			sendError(info.getURL()+" already exists.");
+	    			return;
+	    		}
+	    	} catch (SVNException e) {
+	    		// path doesn't exist, the new branch can be created
+	    	}
+	        urlsToCopyTo.add(branchUrl);
+	        
+	    	String tagUrl = null;
+	        if (createTag) {
+	        	//can be true only when not attaching
+	        	if (StringUtils.isNotEmpty(tagLocation)) {
+	        		//using override value
+	        		tagUrl = tagLocation;
+	        	} else {
+	        		//using default value
+	        		tagUrl = layoutInfo.getDefaultNewDevTagUrl().replace("<new_branch_name>", name);
+	        	}
+	        	try {
+	        		svnUrl = SVNURL.parseURIEncoded(tagUrl);
+	        		SVNInfo info = svnMgr.getWCClient().doInfo(svnUrl, SVNRevision.HEAD, SVNRevision.HEAD);
+	        		sendError(info.getURL()+" already exists.");
+	        		return;
+	        	} catch (SVNException e) {
+	        		// path doesn't exist, the new tag can be created
+	        	}
+	        	urlsToCopyTo.add(tagUrl);
+	        }
+        
+			if (!createSVNCopy(svnMgr, firstLocation, urlsToCopyTo, commitMessage, req, rsp)) {
+				return;
+			}
         }
-
-        rsp.sendRedirect2(req.getContextPath()+"/"+copy.getUrl());
+        
+    	// if the request wasn't forwarded
+    	// copy a job, and adjust its properties for integration
+    	AbstractProject<?,?> copy = Jenkins.getInstance().copy(project, project.getName() + "-" + name.replaceAll("/", "-"));
+    	BulkChange bc = new BulkChange(copy);
+    	try {
+    		copy.removeProperty(IntegratableProject.class);
+    		((AbstractProject)copy).addProperty(new FeatureBranchProperty(project.getName())); // pointless cast for working around javac bug as of JDK1.6.0_02
+    		// update the SCM config to point to the branch
+    		SubversionSCM svnScm = (SubversionSCM)copy.getScm();
+    		copy.setScm(
+    				new SubversionSCM(
+    						Arrays.asList(firstLocation.withRemote(branchUrl)),
+    						svnScm.getWorkspaceUpdater(),
+    						svnScm.getBrowser(),
+    						svnScm.getExcludedRegions(),
+    						svnScm.getExcludedUsers(),
+    						svnScm.getExcludedRevprop(),
+    						svnScm.getExcludedCommitMessages(),
+    						svnScm.getIncludedRegions(),
+    						svnScm.isIgnoreDirPropChanges(),
+    						svnScm.isFilterChangelog(),
+    						svnScm.getAdditionalCredentials()
+    						));
+    	} finally {
+    		bc.commit();
+    	}
+    	
+    	rsp.sendRedirect2(req.getContextPath()+"/"+copy.getUrl());
     }
+    
+    /**
+     * Utility method for SVN copies creation.
+     * First checks if all the given urls already exist; if any exist, creates a copy for each of them.
+     * @param scm the project scm
+     * @param urlsToCopyTo a list of urls to copy to (i.e. where the copies'll be created).
+     * @param commitMessage the commit message to use
+     * @param req the original StaplerRequest
+     * @param rsp the original StaplerResponse
+     * @throws ServletException
+     * @throws IOException
+     */
+    private boolean createSVNCopy(SvnClientManager svnMgr, ModuleLocation originalLocation, List<String> urlsToCopyTo, 
+    						   String commitMessage, StaplerRequest req, StaplerResponse rsp) throws ServletException, IOException {
+         
+        try {
+            for (String urlToCopyTo : urlsToCopyTo) {
+            	SVNURL dst = SVNURL.parseURIEncoded(urlToCopyTo);
+            	svnMgr.getCopyClient().doCopy(originalLocation.getSVNURL(), 
+            								  SVNRevision.HEAD,
+            								  dst, 
+            								  false, 
+            								  true,
+            								  commitMessage
+            								  );
+			}
+            return true;
+        } catch (SVNException e) {
+            sendError(e);
+        	return false;
+        }
+	}
 
-    private static final Pattern KEYWORD = Pattern.compile("/(trunk(/|$)|branches/)");
 }
