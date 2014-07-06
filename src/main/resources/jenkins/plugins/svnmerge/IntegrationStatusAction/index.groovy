@@ -20,10 +20,9 @@ l.layout(norefresh:true, title:_("title",my.project.displayName)) {
 
         if (ia==null) {
             p {
-                raw("""
-                This project has not been integrated to
-                <a href="${Functions.getRelativeLinkTo(my.branchProperty.upstreamProject)}">the upstream</a> yet."
-                """)
+                text("This project has not been integrated to ")
+                a(href: Functions.getRelativeLinkTo(my.branchProperty.upstreamProject), "the upstream")
+                text(" yet.")
             }
         } else {
             p {
