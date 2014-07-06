@@ -156,7 +156,13 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
 
         final ModuleLocation upstreamLocation = getUpstreamSubversionLocation();
         
-        return owner.getModuleRoot().act(new FileCallable<Long>() {
+        AbstractBuild build = owner.getSomeBuildWithWorkspace();
+        if (build == null) {
+            final PrintStream logger = listener.getLogger();
+            logger.print("No workspace found for project! Please perform a build first.\n");
+            return -1L;
+        }
+        return build.getModuleRoot().act(new FileCallable<Long>() {
             public Long invoke(File mr, VirtualChannel virtualChannel) throws IOException {
                 try {
                     final PrintStream logger = listener.getLogger();
