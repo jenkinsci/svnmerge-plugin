@@ -9,7 +9,10 @@ import hudson.model.Fingerprint.RangeSet;
 import hudson.model.Queue.Task;
 import hudson.model.TaskListener;
 import hudson.scm.ChangeLogSet.Entry;
+import hudson.scm.SCM;
 import hudson.scm.SubversionChangeLogSet.LogEntry;
+import hudson.scm.SubversionSCM;
+import hudson.scm.SubversionSCM.ModuleLocation;
 import hudson.scm.SubversionSCM.SvnInfo;
 import hudson.scm.SubversionTagAction;
 import hudson.security.ACL;
@@ -17,13 +20,14 @@ import jenkins.model.Jenkins;
 import jenkins.plugins.svnmerge.FeatureBranchProperty.IntegrationResult;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
+import org.tmatesoft.svn.core.SVNException;
 
 import javax.servlet.ServletException;
 import java.io.File;
 import java.io.IOException;
 import java.util.Hashtable;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 
 /**
  * {@link AbstractBuild}-level action to integrate
@@ -115,10 +119,47 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction<IntegrateSetting
      */
     public SvnInfo getSvnInfo() {
         SubversionTagAction sta = build.getAction(SubversionTagAction.class);
-        if(sta==null)   return null;
-        Map<SvnInfo,List<String>> tags = sta.getTags();
-        if(tags.size()!=1)  return null;    // can't handle more than 1 URLs
-        return tags.keySet().iterator().next();
+        
+        if (sta == null) {
+            return null;
+        }
+        
+        Set<SvnInfo> svnInfos = sta.getTags().keySet();
+        
+        if (svnInfos.isEmpty()) {
+            return null;
+        } else if (svnInfos.size() == 1) {
+            return svnInfos.iterator().next();
+        } else {
+            // Assume the the project SVN module has externals.
+            
+            SCM scm = getProject().getScm();
+            if (!(scm instanceof SubversionSCM)) {
+                return null;
+            }
+            
+            //TODO: check for multiple locations ?
+            SubversionSCM svn = (SubversionSCM) scm;
+            ModuleLocation[] locations = svn.getLocations();
+            
+            if (locations.length == 1) {
+                ModuleLocation firstLocation = svn.getLocations()[0];
+                
+                if (!firstLocation.isIgnoreExternalsOption()) {
+                    for (SvnInfo svnInfo : svnInfos) {
+                        try {
+                            if (svnInfo.getSVNURL().equals(firstLocation.getSVNURL())) {
+                                return svnInfo;
+                            }
+                        } catch (SVNException e) {
+                            // Ignore
+                        }
+                    }
+                }
+            }
+            
+            return null; // can't handle more than 1 URLs
+        }
     }
 
     /**
