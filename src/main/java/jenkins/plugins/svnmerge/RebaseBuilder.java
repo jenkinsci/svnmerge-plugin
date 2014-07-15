@@ -35,7 +35,15 @@ public class RebaseBuilder extends Builder {
 
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
-    	RebaseAction rebaseAction = new  RebaseAction(build.getProject());
+        AbstractProject<?,?> project = build.getProject();
+        FeatureBranchProperty property = project.getProperty(FeatureBranchProperty.class);
+
+        if (property == null) {
+            listener.getLogger().println("Project does not build a Subversion feature branch. Skip rebase action.");
+            return true;
+        }
+
+    	RebaseAction rebaseAction = new  RebaseAction(project);
     	long result = rebaseAction.perform(listener,new RebaseSetting(permalink));
         return !stopBuildIfMergeFails || result >= 0;
     }
