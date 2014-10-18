@@ -1,11 +1,13 @@
 package jenkins.plugins.svnmerge;
 
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath.FileCallable;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.Action;
 import hudson.model.BuildListener;
+import hudson.model.Computer;
 import hudson.model.Item;
 import hudson.model.JobProperty;
 import hudson.model.JobPropertyDescriptor;
@@ -19,6 +21,7 @@ import hudson.scm.SubversionSCM.ModuleLocation;
 import hudson.util.IOException2;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
+
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.tmatesoft.svn.core.ISVNLogEntryHandler;
@@ -84,16 +87,34 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
         return Jenkins.getInstance().getItemByFullName(upstream,AbstractProject.class);
     }
 
-    public ModuleLocation getUpstreamSubversionLocation() {
-        AbstractProject<?,?> p = getUpstreamProject();
-        if(p==null)     return null;
-        SCM scm = p.getScm();
-        if (scm instanceof SubversionSCM) {
-            SubversionSCM svn = (SubversionSCM) scm;
-            return svn.getLocations()[0];
-        }
-        return null;
-    }
+	public ModuleLocation getUpstreamSubversionLocation() {
+		AbstractProject<?, ?> p = getUpstreamProject();
+		if (p == null)
+			return null;
+		SCM scm = p.getScm();
+		if (scm instanceof SubversionSCM) {
+			SubversionSCM svn = (SubversionSCM) scm;
+			ModuleLocation ml = svn.getLocations()[0];
+			// expand system variables
+			Computer c = Computer.currentComputer();
+			if (c != null) {
+				try {
+					EnvVars cEnv = c.getEnvironment();
+					ml.getExpandedLocation(cEnv);
+				} catch (IOException e) {
+                    LOGGER.log(Level.WARNING, "Failed to get computer environment",e);
+				} catch (InterruptedException e) {
+                    LOGGER.log(Level.WARNING, "Failed to get computer environment",e);
+
+				}
+
+			}
+			// expand project variables
+			ml = ml.getExpandedLocation(this.getOwner());
+			return ml;
+		}
+		return null;
+	}
 
     /**
      * Gets the {@link #getUpstreamSubversionLocation()} as {@link SVNURL}
