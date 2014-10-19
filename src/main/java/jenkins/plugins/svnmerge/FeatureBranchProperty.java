@@ -301,16 +301,24 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
                     SVNRevision mergeRev = branchRev >= 0 ? SVNRevision.create(branchRev) : wsState.getRevision();
                     // do we have any meaningful changes in this branch worthy of integration?
                     if (lastIntegrationSourceRevision !=null) {
+                        final SVNException eureka = new SVNException(SVNErrorMessage.UNKNOWN_ERROR_MESSAGE);
+                        try {
                             cm.getLogClient().doLog(new File[]{mr},mergeRev,SVNRevision.create(lastIntegrationSourceRevision),mergeRev,true,false,-1,new ISVNLogEntryHandler() {
                                 public void handleLogEntry(SVNLogEntry e) throws SVNException {
                                     if (e.getMessage().startsWith(RebaseAction.COMMIT_MESSAGE_PREFIX)
                                      || e.getMessage().startsWith(IntegrateAction.COMMIT_MESSAGE_PREFIX))
                                         return; // merge commits
+                                    throw eureka;
                                 }
                             });
                             // didn't find anything interesting. all the changes are our merges
                             logger.println("No changes to be integrated. Skipping integration.");
                             return new IntegrationResult(0,mergeRev);
+                        } catch (SVNException e) {
+                            if (e!=eureka)
+                                throw e;    // some other problems
+                            // found some changes, keep on integrating
+                        }
                     }
                     
                     logger.println("Switching to the upstream (" + up+")");
