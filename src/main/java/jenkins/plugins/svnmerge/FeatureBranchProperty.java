@@ -5,9 +5,9 @@ import hudson.Extension;
 import hudson.FilePath.FileCallable;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
+import hudson.model.Computer;
 import hudson.model.Action;
 import hudson.model.BuildListener;
-import hudson.model.Computer;
 import hudson.model.Item;
 import hudson.model.JobProperty;
 import hudson.model.JobPropertyDescriptor;
@@ -17,6 +17,7 @@ import hudson.remoting.VirtualChannel;
 import hudson.scm.SCM;
 import hudson.scm.SubversionEventHandlerImpl;
 import hudson.scm.SubversionSCM;
+import hudson.scm.SvnClientManager;
 import hudson.scm.SubversionSCM.ModuleLocation;
 import hudson.slaves.NodeProperty;
 import hudson.slaves.EnvironmentVariablesNodeProperty;
@@ -24,6 +25,7 @@ import hudson.util.IOException2;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 
+import org.apache.commons.lang.mutable.MutableBoolean;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.tmatesoft.svn.core.ISVNLogEntryHandler;
@@ -48,6 +50,7 @@ import org.tmatesoft.svn.core.wc.SVNWCClient;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -64,7 +67,9 @@ import static org.tmatesoft.svn.core.wc.SVNRevision.*;
  *
  * @author Kohsuke Kawaguchi
  */
-public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
+public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> implements Serializable {
+    private static final long serialVersionUID = -1L; 
+    
     /**
      * Upstream job name.
      */
@@ -90,14 +95,13 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
         return Jenkins.getInstance().getItemByFullName(upstream,AbstractProject.class);
     }
 
-	public ModuleLocation getUpstreamSubversionLocation() {
-		AbstractProject<?, ?> p = getUpstreamProject();
-		if (p == null)
-			return null;
-		SCM scm = p.getScm();
-		if (scm instanceof SubversionSCM) {
-			SubversionSCM svn = (SubversionSCM) scm;
-			ModuleLocation ml = svn.getLocations()[0];
+    public ModuleLocation getUpstreamSubversionLocation() {
+        AbstractProject<?,?> p = getUpstreamProject();
+        if(p==null)     return null;
+        SCM scm = p.getScm();
+        if (scm instanceof SubversionSCM) {
+            SubversionSCM svn = (SubversionSCM) scm;
+            ModuleLocation ml = svn.getLocations()[0];
 			// expand system variables
 			Computer c = Computer.currentComputer();
 			if (c != null) {
@@ -123,9 +127,9 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
 			// expand project variables
 			ml = ml.getExpandedLocation(this.getOwner());
 			return ml;
-		}
-		return null;
-	}
+        }
+        return null;
+    }
 
     /**
      * Gets the {@link #getUpstreamSubversionLocation()} as {@link SVNURL}
@@ -176,9 +180,18 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
      *      (typically this means a merge conflict.)
      */
     public long rebase(final TaskListener listener, final long upstreamRev) throws IOException, InterruptedException {
-        final ISVNAuthenticationProvider provider = Jenkins.getInstance().getDescriptorByType(
-                SubversionSCM.DescriptorImpl.class).createAuthenticationProvider();
-        return owner.getModuleRoot().act(new FileCallable<Long>() {
+        final SubversionSCM svn = (SubversionSCM) getOwner().getScm();
+        final ISVNAuthenticationProvider provider = svn.createAuthenticationProvider(getOwner(), svn.getLocations()[0]);
+
+        final ModuleLocation upstreamLocation = getUpstreamSubversionLocation();
+        
+        AbstractBuild build = owner.getSomeBuildWithWorkspace();
+        if (build == null) {
+            final PrintStream logger = listener.getLogger();
+            logger.print("No workspace found for project! Please perform a build first.\n");
+            return -1L;
+        }
+        return build.getModuleRoot().act(new FileCallable<Long>() {
             public Long invoke(File mr, VirtualChannel virtualChannel) throws IOException {
                 try {
                     final PrintStream logger = listener.getLogger();
@@ -192,8 +205,10 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
                         }
                     };
 
-                    SVNURL up = getUpstreamURL();
-                    SVNClientManager cm = SubversionSCM.createSvnClientManager(provider);
+                    SvnClientManager svnm = SubversionSCM.createClientManager(provider);
+
+					SVNURL up = upstreamLocation == null ? null : upstreamLocation.getSVNURL();
+                    SVNClientManager cm = svnm.getCore();
                     cm.setEventHandler(printHandler);
 
                     SVNWCClient wc = cm.getWCClient();
@@ -234,7 +249,9 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
     /**
      * Represents the result of integration.
      */
-    public static class IntegrationResult {
+    public static class IntegrationResult implements Serializable {
+        private static final long serialVersionUID = -1L; 
+
         /**
          * The merge commit in the upstream where the integration is made visible to the upstream.
          * Or 0 if the integration was no-op and no commit was made.
@@ -274,8 +291,11 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
     public IntegrationResult integrate(final TaskListener listener, final String branchURL, final long branchRev, final String commitMessage) throws IOException, InterruptedException {
         final Long lastIntegrationSourceRevision = getlastIntegrationSourceRevision();
 
-        final ISVNAuthenticationProvider provider = Jenkins.getInstance().getDescriptorByType(
-                SubversionSCM.DescriptorImpl.class).createAuthenticationProvider();
+        final SubversionSCM svn = (SubversionSCM) getUpstreamProject().getScm();
+        final ISVNAuthenticationProvider provider = svn.createAuthenticationProvider(getUpstreamProject(), svn.getLocations()[0]);
+
+        final ModuleLocation upstreamLocation = getUpstreamSubversionLocation();
+        
         return owner.getModuleRoot().act(new FileCallable<IntegrationResult>() {
             public IntegrationResult invoke(File mr, VirtualChannel virtualChannel) throws IOException {
                 try {
@@ -290,8 +310,10 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
                         }
                     };
 
-                    SVNURL up = getUpstreamURL();
-                    SVNClientManager cm = SubversionSCM.createSvnClientManager(provider);
+                    SvnClientManager svnm = SubversionSCM.createClientManager(provider);
+
+					SVNURL up = upstreamLocation == null ? null : upstreamLocation.getSVNURL();
+                    SVNClientManager cm = svnm.getCore();
                     cm.setEventHandler(printHandler);
 
                     // capture the working directory state before the switch
@@ -299,25 +321,26 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
                     SVNInfo wsState = wc.doInfo(mr, null);
                     SVNURL mergeUrl = branchURL != null ? SVNURL.parseURIDecoded(branchURL) : wsState.getURL();
                     SVNRevision mergeRev = branchRev >= 0 ? SVNRevision.create(branchRev) : wsState.getRevision();
+
                     // do we have any meaningful changes in this branch worthy of integration?
                     if (lastIntegrationSourceRevision !=null) {
-                        final SVNException eureka = new SVNException(SVNErrorMessage.UNKNOWN_ERROR_MESSAGE);
-                        try {
-                            cm.getLogClient().doLog(new File[]{mr},mergeRev,SVNRevision.create(lastIntegrationSourceRevision),mergeRev,true,false,-1,new ISVNLogEntryHandler() {
-                                public void handleLogEntry(SVNLogEntry e) throws SVNException {
-                                    if (e.getMessage().startsWith(RebaseAction.COMMIT_MESSAGE_PREFIX)
-                                     || e.getMessage().startsWith(IntegrateAction.COMMIT_MESSAGE_PREFIX))
-                                        return; // merge commits
-                                    throw eureka;
+                    	final MutableBoolean changesFound = new MutableBoolean(false);
+                        cm.getLogClient().doLog(new File[]{mr},mergeRev,SVNRevision.create(lastIntegrationSourceRevision),mergeRev,true,false,-1,new ISVNLogEntryHandler() {
+                            public void handleLogEntry(SVNLogEntry e) throws SVNException {
+                                if (!changesFound.booleanValue()) {
+                                	String message = e.getMessage();
+                                	
+                                    if (!message.startsWith(RebaseAction.COMMIT_MESSAGE_PREFIX)
+                                    		&& !message.startsWith(IntegrateAction.COMMIT_MESSAGE_PREFIX)) {
+                                    	changesFound.setValue(true);
+                                    }
                                 }
-                            });
-                            // didn't find anything interesting. all the changes are our merges
-                            logger.println("No changes to be integrated. Skipping integration.");
-                            return new IntegrationResult(0,mergeRev);
-                        } catch (SVNException e) {
-                            if (e!=eureka)
-                                throw e;    // some other problems
-                            // found some changes, keep on integrating
+                            }
+                        });
+                        // didn't find anything interesting. all the changes are our merges
+                        if (!changesFound.booleanValue()) {
+	                        logger.println("No changes to be integrated. Skipping integration.");
+	                        return new IntegrationResult(0,mergeRev);
                         }
                     }
                     
