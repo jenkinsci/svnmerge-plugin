@@ -28,6 +28,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.tmatesoft.svn.core.ISVNLogEntryHandler;
 import org.tmatesoft.svn.core.SVNCommitInfo;
+import org.tmatesoft.svn.core.SVNErrorMessage;
 import org.tmatesoft.svn.core.SVNException;
 import org.tmatesoft.svn.core.SVNLogEntry;
 import org.tmatesoft.svn.core.SVNURL;
@@ -298,27 +299,18 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> {
                     SVNInfo wsState = wc.doInfo(mr, null);
                     SVNURL mergeUrl = branchURL != null ? SVNURL.parseURIDecoded(branchURL) : wsState.getURL();
                     SVNRevision mergeRev = branchRev >= 0 ? SVNRevision.create(branchRev) : wsState.getRevision();
-
                     // do we have any meaningful changes in this branch worthy of integration?
                     if (lastIntegrationSourceRevision !=null) {
-                        final SVNException eureka = new SVNException(null);
-                        try {
                             cm.getLogClient().doLog(new File[]{mr},mergeRev,SVNRevision.create(lastIntegrationSourceRevision),mergeRev,true,false,-1,new ISVNLogEntryHandler() {
                                 public void handleLogEntry(SVNLogEntry e) throws SVNException {
                                     if (e.getMessage().startsWith(RebaseAction.COMMIT_MESSAGE_PREFIX)
                                      || e.getMessage().startsWith(IntegrateAction.COMMIT_MESSAGE_PREFIX))
                                         return; // merge commits
-                                    throw eureka;
                                 }
                             });
                             // didn't find anything interesting. all the changes are our merges
                             logger.println("No changes to be integrated. Skipping integration.");
                             return new IntegrationResult(0,mergeRev);
-                        } catch (SVNException e) {
-                            if (e!=eureka)
-                                throw e;    // some other problems
-                            // found some changes, keep on integrating
-                        }
                     }
                     
                     logger.println("Switching to the upstream (" + up+")");
