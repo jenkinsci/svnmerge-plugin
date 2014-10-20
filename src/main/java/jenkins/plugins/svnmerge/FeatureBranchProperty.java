@@ -124,8 +124,8 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
 
 				}
 			}
-			// expand project variables
-			ml = ml.getExpandedLocation(this.getOwner());
+			// expand upstream project variables
+			ml = ml.getExpandedLocation(p);
 			return ml;
         }
         return null;

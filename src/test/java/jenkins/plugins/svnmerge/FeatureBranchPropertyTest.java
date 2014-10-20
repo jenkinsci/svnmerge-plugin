@@ -57,9 +57,9 @@ public class FeatureBranchPropertyTest extends HudsonTestCase {
 		ParameterDefinition def2 = new StringParameterDefinition("PROJECT", "b");
 		p.addProperty(new ParametersDefinitionProperty(def1,def2));
 		FeatureBranchProperty jobProp = new FeatureBranchProperty(p.getName());
-		p.addProperty(jobProp);
+		FreeStyleProject p2 = createFreeStyleProject();
+		p2.addProperty(jobProp);
 		assertEquals( "https://root/a/b/trunk",jobProp.getUpstreamURL().toDecodedString());
-
 	}
     
     
