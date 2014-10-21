@@ -102,30 +102,8 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
         if (scm instanceof SubversionSCM) {
             SubversionSCM svn = (SubversionSCM) scm;
             ModuleLocation ml = svn.getLocations()[0];
-			// expand system variables
-			Computer c = Computer.currentComputer();
-			if (c != null) {
-				try {
-					// JVM vars
-					EnvVars cEnv = c.getEnvironment();
-					ml = ml.getExpandedLocation(cEnv);
-					// node vars
-					for (NodeProperty<?> nodeProp: c.getNode().getNodeProperties()){
-						if(nodeProp instanceof EnvironmentVariablesNodeProperty){
-							EnvVars nodeEnvVars = ((EnvironmentVariablesNodeProperty) nodeProp).getEnvVars();
-							ml = ml.getExpandedLocation(nodeEnvVars);
-
-						}
-					}
-				} catch (IOException e) {
-                    LOGGER.log(Level.WARNING, "Failed to get computer environment",e);
-				} catch (InterruptedException e) {
-                    LOGGER.log(Level.WARNING, "Failed to get computer environment",e);
-
-				}
-			}
-			// expand upstream project variables
-			ml = ml.getExpandedLocation(p);
+			// expand system and node environment variables as well as the project parameters
+			ml = Utility.getExpandedLocation(ml, p);
 			return ml;
         }
         return null;

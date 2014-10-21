@@ -1,25 +1,19 @@
 package jenkins.plugins.svnmerge;
 
 import hudson.BulkChange;
-import hudson.EnvVars;
 import hudson.Util;
 import hudson.model.Action;
 import hudson.model.AbstractModelObject;
 import hudson.model.AbstractProject;
-import hudson.model.Computer;
 import hudson.scm.SvnClientManager;
 import hudson.scm.SCM;
 import hudson.scm.SubversionSCM;
 import hudson.scm.SubversionSCM.ModuleLocation;
-import hudson.slaves.EnvironmentVariablesNodeProperty;
-import hudson.slaves.NodeProperty;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javax.servlet.ServletException;
 
@@ -96,6 +90,8 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         //TODO: check for multiple locations ?
         SubversionSCM svn = (SubversionSCM) scm;
         ModuleLocation firstLocation = svn.getLocations()[0];
+        // expand system and node environment variables as well as the project parameters
+        firstLocation = Utility.getExpandedLocation(firstLocation, project);
 		return getRepositoryLayout(firstLocation);
     }
 
@@ -134,33 +130,8 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         // TODO: check for multiple locations
         SubversionSCM svn = (SubversionSCM) scm;
         ModuleLocation firstLocation = svn.getLocations()[0];
-		// expand system variables
-		Computer c = Computer.currentComputer();
-		if (c != null) {
-			try {
-				// JVM vars
-				EnvVars cEnv = c.getEnvironment();
-				firstLocation = firstLocation.getExpandedLocation(cEnv);
-				// node vars
-				for (NodeProperty<?> nodeProp : c.getNode().getNodeProperties()) {
-					if (nodeProp instanceof EnvironmentVariablesNodeProperty) {
-						EnvVars nodeEnvVars = ((EnvironmentVariablesNodeProperty) nodeProp)
-								.getEnvVars();
-						firstLocation = firstLocation.getExpandedLocation(nodeEnvVars);
-
-					}
-				}
-			} catch (IOException e) {
-				LOGGER.log(Level.WARNING, "Failed to get computer environment",
-						e);
-			} catch (InterruptedException e) {
-				LOGGER.log(Level.WARNING, "Failed to get computer environment",
-						e);
-
-			}
-		}
-		// expand upstream project variables
-		firstLocation = firstLocation.getExpandedLocation(project);
+        // expand system and node environment variables as well as the project parameters
+        firstLocation = Utility.getExpandedLocation(firstLocation, project);
 
         RepositoryLayoutInfo layoutInfo = getRepositoryLayout(firstLocation);
         
@@ -298,7 +269,5 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         	return false;
         }
 	}
-
-    private static final Logger LOGGER = Logger.getLogger(IntegratableProjectAction.class.getName());
 
 }
