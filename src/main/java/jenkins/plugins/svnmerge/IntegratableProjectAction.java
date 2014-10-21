@@ -1,19 +1,25 @@
 package jenkins.plugins.svnmerge;
 
 import hudson.BulkChange;
+import hudson.EnvVars;
 import hudson.Util;
 import hudson.model.Action;
 import hudson.model.AbstractModelObject;
 import hudson.model.AbstractProject;
+import hudson.model.Computer;
 import hudson.scm.SvnClientManager;
 import hudson.scm.SCM;
 import hudson.scm.SubversionSCM;
 import hudson.scm.SubversionSCM.ModuleLocation;
+import hudson.slaves.EnvironmentVariablesNodeProperty;
+import hudson.slaves.NodeProperty;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.servlet.ServletException;
 
@@ -23,6 +29,7 @@ import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
+import org.kohsuke.stapler.interceptor.RequirePOST;
 import org.tmatesoft.svn.core.SVNException;
 import org.tmatesoft.svn.core.SVNNodeKind;
 import org.tmatesoft.svn.core.SVNURL;
@@ -96,6 +103,7 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
 		return new RepositoryLayoutInfo(location.getURL());
     }
 
+    @RequirePOST
     public void doNewBranch(StaplerRequest req, StaplerResponse rsp, 
     						@QueryParameter String name, 
     						@QueryParameter boolean attach, 
@@ -103,7 +111,6 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
     						@QueryParameter String branchLocation,
     						@QueryParameter boolean createTag,
     						@QueryParameter String tagLocation) throws ServletException, IOException {
-        requirePOST();
         
         name = Util.fixEmptyAndTrim(name);
         
@@ -127,7 +134,34 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         // TODO: check for multiple locations
         SubversionSCM svn = (SubversionSCM) scm;
         ModuleLocation firstLocation = svn.getLocations()[0];
-        
+		// expand system variables
+		Computer c = Computer.currentComputer();
+		if (c != null) {
+			try {
+				// JVM vars
+				EnvVars cEnv = c.getEnvironment();
+				firstLocation = firstLocation.getExpandedLocation(cEnv);
+				// node vars
+				for (NodeProperty<?> nodeProp : c.getNode().getNodeProperties()) {
+					if (nodeProp instanceof EnvironmentVariablesNodeProperty) {
+						EnvVars nodeEnvVars = ((EnvironmentVariablesNodeProperty) nodeProp)
+								.getEnvVars();
+						firstLocation = firstLocation.getExpandedLocation(nodeEnvVars);
+
+					}
+				}
+			} catch (IOException e) {
+				LOGGER.log(Level.WARNING, "Failed to get computer environment",
+						e);
+			} catch (InterruptedException e) {
+				LOGGER.log(Level.WARNING, "Failed to get computer environment",
+						e);
+
+			}
+		}
+		// expand upstream project variables
+		firstLocation = firstLocation.getExpandedLocation(project);
+
         RepositoryLayoutInfo layoutInfo = getRepositoryLayout(firstLocation);
         
         branchLocation =  Util.fixEmptyAndTrim(branchLocation);
@@ -264,5 +298,7 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         	return false;
         }
 	}
+
+    private static final Logger LOGGER = Logger.getLogger(IntegratableProjectAction.class.getName());
 
 }
