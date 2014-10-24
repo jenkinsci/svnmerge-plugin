@@ -174,5 +174,23 @@ public class RepositoryLayoutInfoTest {
 		assertEquals(RepositoryLayoutEnum.CUSTOM, repoLayout.getLayout());
 		assertEquals(scmModuleLocation, repoLayout.getScmModuleLocation());
 		assertNull(repoLayout.getSubProjectName());
+		
+		//single project layout, starting from trunk with revision
+		scmModuleLocation = "http://svnserver:port/trunk@HEAD";
+		repoLayout = new RepositoryLayoutInfo(scmModuleLocation);
+		assertEquals(RepositoryLayoutEnum.SINGLE, repoLayout.getLayout());
+		assertEquals("http://svnserver:port/trunk@HEAD", repoLayout.getScmModuleLocation());
+		assertNull(repoLayout.getSubProjectName());
+		assertEquals("http://svnserver:port/branches/<new_branch_name>/", repoLayout.getDefaultNewBranchUrl());
+		assertEquals("http://svnserver:port/tags/dev/<new_branch_name>/", repoLayout.getDefaultNewDevTagUrl());
+		
+		//single project layout, starting from a branch with revision
+		scmModuleLocation = "http://svnserver:port/branches/brid@HEAD";
+		repoLayout = new RepositoryLayoutInfo(scmModuleLocation);
+		assertEquals(RepositoryLayoutEnum.SINGLE, repoLayout.getLayout());
+		assertEquals("http://svnserver:port/branches/brid@HEAD", repoLayout.getScmModuleLocation());
+		assertNull(repoLayout.getSubProjectName());
+		assertEquals("http://svnserver:port/branches/<new_branch_name>/", repoLayout.getDefaultNewBranchUrl());
+		assertEquals("http://svnserver:port/tags/dev/<new_branch_name>/", repoLayout.getDefaultNewDevTagUrl());
 	}
 }

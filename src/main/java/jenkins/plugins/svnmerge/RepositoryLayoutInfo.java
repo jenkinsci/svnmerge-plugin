@@ -17,8 +17,8 @@ import org.apache.commons.lang.StringUtils;
  */
 public class RepositoryLayoutInfo {
 	
-	private static final Pattern TRUNK_PATTERN = Pattern.compile("/trunk(?:/([^/]*))?$");
-	private static final Pattern BRANCHES_PATTERN = Pattern.compile("/branches/[^/]+(?:/([^/]*))?$");
+	private static final Pattern TRUNK_PATTERN = Pattern.compile("/trunk(?:/([^/@]*))?(?:@HEAD)?$");
+	private static final Pattern BRANCHES_PATTERN = Pattern.compile("/branches/[^/]+(?:/([^/@]*))?(?:@HEAD)?$");
 	private static final short GROUP_INDEX = 1;
 	private static final String ROOT_URL_SUFFIX = "/branches/<new_branch_name>/";
 	
