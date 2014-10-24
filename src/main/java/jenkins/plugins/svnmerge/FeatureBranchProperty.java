@@ -1,9 +1,11 @@
 package jenkins.plugins.svnmerge;
 
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath.FileCallable;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
+import hudson.model.Computer;
 import hudson.model.Action;
 import hudson.model.BuildListener;
 import hudson.model.Item;
@@ -17,6 +19,8 @@ import hudson.scm.SubversionEventHandlerImpl;
 import hudson.scm.SubversionSCM;
 import hudson.scm.SvnClientManager;
 import hudson.scm.SubversionSCM.ModuleLocation;
+import hudson.slaves.NodeProperty;
+import hudson.slaves.EnvironmentVariablesNodeProperty;
 import hudson.util.IOException2;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
@@ -97,7 +101,10 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
         SCM scm = p.getScm();
         if (scm instanceof SubversionSCM) {
             SubversionSCM svn = (SubversionSCM) scm;
-            return svn.getLocations()[0];
+            ModuleLocation ml = svn.getLocations()[0];
+			// expand system and node environment variables as well as the project parameters
+			ml = Utility.getExpandedLocation(ml, p);
+			return ml;
         }
         return null;
     }

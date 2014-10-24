@@ -23,6 +23,7 @@ import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
+import org.kohsuke.stapler.interceptor.RequirePOST;
 import org.tmatesoft.svn.core.SVNException;
 import org.tmatesoft.svn.core.SVNNodeKind;
 import org.tmatesoft.svn.core.SVNURL;
@@ -89,6 +90,8 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         //TODO: check for multiple locations ?
         SubversionSCM svn = (SubversionSCM) scm;
         ModuleLocation firstLocation = svn.getLocations()[0];
+        // expand system and node environment variables as well as the project parameters
+        firstLocation = Utility.getExpandedLocation(firstLocation, project);
 		return getRepositoryLayout(firstLocation);
     }
 
@@ -96,6 +99,7 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
 		return new RepositoryLayoutInfo(location.getURL());
     }
 
+    @RequirePOST
     public void doNewBranch(StaplerRequest req, StaplerResponse rsp, 
     						@QueryParameter String name, 
     						@QueryParameter boolean attach, 
@@ -103,7 +107,6 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
     						@QueryParameter String branchLocation,
     						@QueryParameter boolean createTag,
     						@QueryParameter String tagLocation) throws ServletException, IOException {
-        requirePOST();
         
         name = Util.fixEmptyAndTrim(name);
         
@@ -127,7 +130,9 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         // TODO: check for multiple locations
         SubversionSCM svn = (SubversionSCM) scm;
         ModuleLocation firstLocation = svn.getLocations()[0];
-        
+        // expand system and node environment variables as well as the project parameters
+        firstLocation = Utility.getExpandedLocation(firstLocation, project);
+
         RepositoryLayoutInfo layoutInfo = getRepositoryLayout(firstLocation);
         
         branchLocation =  Util.fixEmptyAndTrim(branchLocation);
