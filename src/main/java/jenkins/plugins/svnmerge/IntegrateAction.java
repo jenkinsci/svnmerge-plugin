@@ -10,6 +10,7 @@ import hudson.model.Queue.Task;
 import hudson.model.TaskListener;
 import hudson.scm.ChangeLogSet.Entry;
 import hudson.scm.SCM;
+import hudson.scm.SVNRevisionState;
 import hudson.scm.SubversionChangeLogSet.LogEntry;
 import hudson.scm.SubversionSCM;
 import hudson.scm.SubversionSCM.ModuleLocation;
@@ -178,8 +179,11 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction<IntegrateSetting
     public long perform(TaskListener listener, SvnInfo src) throws IOException, InterruptedException {
         String commitMessage = getCommitMessage();
 
-        // if this is -1, it doesn't capture
-        IntegrationResult r = getProperty().integrate(listener, src.url, -1, commitMessage);
+        SubversionSCM scm = (SubversionSCM) getProject().getScm();
+        SVNRevisionState state = build.getAction(SVNRevisionState.class);
+        long revision = state.getRevision(scm.getLocations()[0].getURL());
+
+        IntegrationResult r = getProperty().integrate(listener, src.url, revision, commitMessage);
         integratedRevision = r.mergeCommit;
         integrationSource = r.integrationSource;
         if(integratedRevision>0) {
