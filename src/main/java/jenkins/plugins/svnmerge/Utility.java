@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import jenkins.model.Jenkins;
+
 public class Utility {
 
 	
@@ -26,6 +28,17 @@ public class Utility {
 				// JVM vars
 				EnvVars cEnv = c.getEnvironment();
 				location = location.getExpandedLocation(cEnv);
+				// global node vars
+				for (NodeProperty<?> globalNodeProp : Jenkins.getInstance().getGlobalNodeProperties()) {
+					if (globalNodeProp instanceof EnvironmentVariablesNodeProperty) {
+						EnvVars nodeEnvVars = ((EnvironmentVariablesNodeProperty) globalNodeProp)
+								.getEnvVars();
+						location = location
+								.getExpandedLocation(nodeEnvVars);
+
+					}
+				}
+				
 				// node vars
 				for (NodeProperty<?> nodeProp : c.getNode().getNodeProperties()) {
 					if (nodeProp instanceof EnvironmentVariablesNodeProperty) {
