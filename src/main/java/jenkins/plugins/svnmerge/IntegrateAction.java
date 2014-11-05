@@ -147,7 +147,7 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction<IntegrateSetting
             if (locations.length == 1) {
                 ModuleLocation firstLocation = svn.getLocations()[0];
                 // expand system and node environment variables as well as the project parameters
-                firstLocation = Utility.getExpandedLocation(firstLocation, project);
+                firstLocation = Utility.getExpandedLocation(firstLocation, getProject());
                 if (!firstLocation.isIgnoreExternalsOption()) {
                     for (SvnInfo svnInfo : svnInfos) {
                         try {
