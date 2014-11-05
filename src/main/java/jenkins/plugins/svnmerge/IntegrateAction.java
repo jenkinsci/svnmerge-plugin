@@ -181,7 +181,9 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction<IntegrateSetting
 
         SubversionSCM scm = (SubversionSCM) getProject().getScm();
         SVNRevisionState state = build.getAction(SVNRevisionState.class);
-        long revision = state.getRevision(scm.getLocations()[0].getURL());
+        ModuleLocation moduleLocation = scm.getLocations()[0];
+        moduleLocation= Utility.getExpandedLocation(moduleLocation, getProject());
+        long revision = state.getRevision(moduleLocation.getURL());
 
         IntegrationResult r = getProperty().integrate(listener, src.url, revision, commitMessage);
         integratedRevision = r.mergeCommit;
