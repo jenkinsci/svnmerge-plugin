@@ -18,11 +18,13 @@ import hudson.scm.SubversionTagAction;
 import hudson.security.ACL;
 import jenkins.model.Jenkins;
 import jenkins.plugins.svnmerge.FeatureBranchProperty.IntegrationResult;
+
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 import org.tmatesoft.svn.core.SVNException;
 
 import javax.servlet.ServletException;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Hashtable;
@@ -144,7 +146,8 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction<IntegrateSetting
             
             if (locations.length == 1) {
                 ModuleLocation firstLocation = svn.getLocations()[0];
-                
+                // expand system and node environment variables as well as the project parameters
+                firstLocation = Utility.getExpandedLocation(firstLocation, getProject());
                 if (!firstLocation.isIgnoreExternalsOption()) {
                     for (SvnInfo svnInfo : svnInfos) {
                         try {
