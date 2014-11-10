@@ -16,6 +16,7 @@ import hudson.scm.SubversionSCM.ModuleLocation;
 import hudson.scm.SubversionSCM.SvnInfo;
 import hudson.scm.SubversionTagAction;
 import hudson.security.ACL;
+import hudson.util.LogTaskListener;
 import jenkins.model.Jenkins;
 import jenkins.plugins.svnmerge.FeatureBranchProperty.IntegrationResult;
 
@@ -30,6 +31,8 @@ import java.io.IOException;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Logger;
+import static java.util.logging.Level.WARNING;
 
 /**
  * {@link AbstractBuild}-level action to integrate
@@ -119,51 +122,40 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction<IntegrateSetting
     /**
      * URL and revision to be integrated from this action.
      */
-    public SvnInfo getSvnInfo() {
-        SubversionTagAction sta = build.getAction(SubversionTagAction.class);
-        
-        if (sta == null) {
-            return null;
-        }
-        
-        Set<SvnInfo> svnInfos = sta.getTags().keySet();
-        
-        if (svnInfos.isEmpty()) {
-            return null;
-        } else if (svnInfos.size() == 1) {
-            return svnInfos.iterator().next();
-        } else {
-            // Assume the the project SVN module has externals.
-            
-            SCM scm = getProject().getScm();
-            if (!(scm instanceof SubversionSCM)) {
-                return null;
-            }
-            
-            //TODO: check for multiple locations ?
-            SubversionSCM svn = (SubversionSCM) scm;
-            ModuleLocation[] locations = svn.getLocations();
-            
-            if (locations.length == 1) {
-                ModuleLocation firstLocation = svn.getLocations()[0];
-                // expand system and node environment variables as well as the project parameters
-                firstLocation = Utility.getExpandedLocation(firstLocation, getProject());
-                if (!firstLocation.isIgnoreExternalsOption()) {
-                    for (SvnInfo svnInfo : svnInfos) {
-                        try {
-                            if (svnInfo.getSVNURL().equals(firstLocation.getSVNURL())) {
-                                return svnInfo;
-                            }
-                        } catch (SVNException e) {
-                            // Ignore
-                        }
-                    }
-                }
-            }
-            
-            return null; // can't handle more than 1 URLs
-        }
-    }
+	public SvnInfo getSvnInfo() {
+		SCM scm = getProject().getScm();
+		if (!(scm instanceof SubversionSCM)) {
+			return null;
+		} 
+		// TODO: check for multiple locations ?
+		SubversionSCM svn = (SubversionSCM) scm;
+		ModuleLocation[] locations = svn.getLocations(); 
+		if (locations.length == 1) {
+			TaskListener listener = new LogTaskListener(LOGGER, WARNING);
+			ModuleLocation firstLocation = svn.getLocations()[0];
+			// expand system and node environment variables as well as the
+			// project parameters
+			firstLocation = Utility.getExpandedLocation(firstLocation,
+					getProject());
+			if (!firstLocation.isIgnoreExternalsOption()) {
+				try {
+					return new SvnInfo(firstLocation.getSVNURL()
+							.toDecodedString(), Long.parseLong(build
+							.getEnvironment(listener).get("SVN_REVISION_1")));
+				} catch (SVNException e) {
+					LOGGER.log(WARNING, "Could not get SVN URL and revision", e);
+				} catch (NumberFormatException e) {
+					LOGGER.log(WARNING, "Could not get SVN URL and revision", e);
+				} catch (IOException e) {
+					LOGGER.log(WARNING, "Could not get SVN URL and revision", e);
+				} catch (InterruptedException e) {
+					LOGGER.log(WARNING, "Could not get SVN URL and revision", e);
+				}
+			}
+		}
+
+		return null; // can't handle more than 1 URLs
+	}
 
     /**
      * Integrate the branch.
@@ -293,4 +285,6 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction<IntegrateSetting
     // used to find integration commits. commit messages start with PREFIX, contains SUFFIX, followed by paths
     static final String COMMIT_MESSAGE_PREFIX = "Integrated ";
     static final String COMMIT_MESSAGE_SUFFIX = " (from Jenkins)";
+    private static final Logger LOGGER = Logger.getLogger(IntegrateAction.class.getName());
+
 }
