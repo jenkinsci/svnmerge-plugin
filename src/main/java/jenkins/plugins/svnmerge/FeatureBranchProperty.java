@@ -178,8 +178,10 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
                         @Override
                         public void handleEvent(SVNEvent event, double progress) throws SVNException {
                             super.handleEvent(event, progress);
-                            if(event.getContentsStatus()== SVNStatusType.CONFLICTED)
-                                foundConflict[0] = true;
+							if (event.getContentsStatus() == SVNStatusType.CONFLICTED
+									|| event.getContentsStatus() == SVNStatusType.CONFLICTED_UNRESOLVED) {
+								foundConflict[0] = true;
+							}
                         }
                     };
 
@@ -206,16 +208,27 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
                         wc.doRevert(new File[]{mr},INFINITY, null);
                         return -1L;
                     } else {
-                        logger.println("Committing changes");
-                        SVNCommitClient cc = cm.getCommitClient();
-                        SVNCommitInfo ci = cc.doCommit(new File[]{mr}, false, RebaseAction.COMMIT_MESSAGE_PREFIX+"Rebasing from "+up+"@"+mergeRev, null, null, false, false, INFINITY);
-                        if(ci.getNewRevision()<0) {
-                            logger.println("  No changes since the last rebase. This rebase was a no-op.");
-                            return 0L;
-                        } else {
-                            logger.println("  committed revision "+ci.getNewRevision());
-                            return ci.getNewRevision();
-                        }
+						try {
+							logger.println("Committing changes");
+							SVNCommitClient cc = cm.getCommitClient();
+							SVNCommitInfo ci = cc.doCommit(new File[] { mr },
+									false, RebaseAction.COMMIT_MESSAGE_PREFIX
+											+ "Rebasing from " + up + "@"
+											+ mergeRev, null, null, false,
+									false, INFINITY);
+							if (ci.getNewRevision() < 0) {
+								logger.println("  No changes since the last rebase. This rebase was a no-op.");
+								return 0L;
+							} else {
+								logger.println("  committed revision "
+										+ ci.getNewRevision());
+								return ci.getNewRevision();
+							}
+						} catch (SVNException e) {
+							logger.println("Failed to commit! Reverting this failed merge");
+							wc.doRevert(new File[] { mr }, INFINITY, null);
+							return -1L;
+						}
                     }
                 } catch (SVNException e) {
                     throw new IOException2("Failed to merge", e);
