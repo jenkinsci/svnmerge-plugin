@@ -174,7 +174,7 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction<IntegrateSetting
         String commitMessage = getCommitMessage();
 
         // if this is -1, it doesn't capture
-        IntegrationResult r = getProperty().integrate(listener, src.url, -1, commitMessage);
+        IntegrationResult r = getProperty().integrate(listener, src.url, src.revision, commitMessage);
         integratedRevision = r.mergeCommit;
         integrationSource = r.integrationSource;
         if(integratedRevision>0) {
