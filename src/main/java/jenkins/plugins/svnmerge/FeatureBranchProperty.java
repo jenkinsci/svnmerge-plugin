@@ -225,7 +225,9 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
 								return ci.getNewRevision();
 							}
 						} catch (SVNException e) {
-							logger.println("Failed to commit! Reverting this failed merge");
+							logger.println("Failed to commit!");
+							logger.println(e.getLocalizedMessage());
+							logger.println("Reverting this failed merge..");
 							wc.doRevert(new File[] { mr }, INFINITY, null);
 							return -1L;
 						}
