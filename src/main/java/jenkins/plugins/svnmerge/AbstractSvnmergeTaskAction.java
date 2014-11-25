@@ -14,13 +14,17 @@ import hudson.model.queue.AbstractQueueTask;
 import hudson.model.queue.CauseOfBlockage;
 import hudson.remoting.AsyncFutureImpl;
 import hudson.security.Permission;
+import hudson.security.PermissionGroup;
+import hudson.security.PermissionScope;
 import jenkins.model.Jenkins;
+
 import org.acegisecurity.AccessDeniedException;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 import org.kohsuke.stapler.framework.io.LargeText;
 
 import javax.servlet.ServletException;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.Future;
@@ -31,7 +35,12 @@ import java.util.concurrent.Future;
  *          Type that represents the parameter of the action
  */
 public abstract class AbstractSvnmergeTaskAction<P> extends TaskAction {
-    /*package*/ AbstractSvnmergeTaskAction() { // subtyping only allowed for this plugin
+	 public static final PermissionGroup PERMISSIONS = new PermissionGroup(AbstractSvnmergeTaskAction.class, Messages._PermissionGroupName());
+     public static final Permission REBASE_PERMISSION = new Permission(PERMISSIONS,"Rebase",Messages._RebaseAction_PermissionDesc(),null, PermissionScope.ITEM);
+     public static final Permission INTEGRATE_PERMISSION = new Permission(PERMISSIONS,"Integrate",Messages._IntegrateAction_PermissionDesc(),null, PermissionScope.ITEM);
+
+	
+	/*package*/ AbstractSvnmergeTaskAction() { // subtyping only allowed for this plugin
     }
 
     public abstract AbstractProject<?,?> getProject();

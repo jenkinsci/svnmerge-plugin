@@ -43,12 +43,6 @@ import static java.util.logging.Level.WARNING;
  */
 public class IntegrateAction extends AbstractSvnmergeTaskAction<IntegrateSetting> implements BuildBadgeAction {
 
-    /**
-     * Permission to trigger an integration.
-     */
-	 public static final PermissionGroup PERMISSIONS = new PermissionGroup(IntegrateAction.class, Messages._IntegrateAction_PermissionName());
-     public static final Permission INTEGRATE_PERMISSION = new Permission(PERMISSIONS,"Integrate",Messages._IntegrateAction_PermissionDesc(),null, PermissionScope.ITEM);
-
      protected Permission getPermission() {
          return INTEGRATE_PERMISSION;
      }

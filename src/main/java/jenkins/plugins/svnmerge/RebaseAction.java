@@ -28,11 +28,6 @@ import java.io.IOException;
  * @author Kohsuke Kawaguchi
  */
 public class RebaseAction extends AbstractSvnmergeTaskAction<RebaseSetting> {
-    /**
-     * Permission to trigger an integration.
-     */
-	 public static final PermissionGroup PERMISSIONS = new PermissionGroup(RebaseAction.class, Messages._RebaseAction_PermissionName());
-     public static final Permission REBASE_PERMISSION = new Permission(PERMISSIONS,"Rebase",Messages._RebaseAction_PermissionDesc(),null, PermissionScope.ITEM);
 
      protected Permission getPermission() {
          return REBASE_PERMISSION;
