@@ -34,10 +34,6 @@ public abstract class AbstractSvnmergeTaskAction<P> extends TaskAction {
     /*package*/ AbstractSvnmergeTaskAction() { // subtyping only allowed for this plugin
     }
 
-    protected Permission getPermission() {
-        return Item.CONFIGURE;
-    }
-
     public abstract AbstractProject<?,?> getProject();
 
     public final FeatureBranchProperty getProperty() {

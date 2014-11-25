@@ -9,11 +9,16 @@ import hudson.model.TaskListener;
 import hudson.scm.SubversionSCM.SvnInfo;
 import hudson.scm.SubversionTagAction;
 import hudson.security.ACL;
+import hudson.security.Permission;
+import hudson.security.PermissionGroup;
+import hudson.security.PermissionScope;
 import jenkins.model.Jenkins;
+
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
 import javax.servlet.ServletException;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -23,6 +28,16 @@ import java.io.IOException;
  * @author Kohsuke Kawaguchi
  */
 public class RebaseAction extends AbstractSvnmergeTaskAction<RebaseSetting> {
+    /**
+     * Permission to trigger an integration.
+     */
+	 public static final PermissionGroup PERMISSIONS = new PermissionGroup(IntegrateAction.class, Messages._RebaseAction_PermissionName());
+     public static final Permission REBASE_PERMISSION = new Permission(PERMISSIONS,"Rebase",Messages._RebaseAction_PermissionDesc(),null, PermissionScope.ITEM);
+
+     protected Permission getPermission() {
+         return REBASE_PERMISSION;
+     }
+	
     public final AbstractProject<?,?> project;
 
     public RebaseAction(AbstractProject<?,?> project) {
