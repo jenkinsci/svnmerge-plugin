@@ -10,6 +10,7 @@ import hudson.scm.SubversionSCM.SvnInfo;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Publisher;
+import jenkins.model.Jenkins;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
@@ -38,7 +39,7 @@ public class IntegrationPublisher extends Publisher {
         if(build.getResult().isWorseThan(Result.SUCCESS))
             return true;
 
-        IntegrateAction ia = build.getAction(IntegrateAction.class);
+        IntegrateAction ia= getIntegrateAction(build);
         if(ia==null) {
             listener.getLogger().println("Upstream Subversion URL is not specified. Configuration problem?");
             return false;
@@ -63,5 +64,17 @@ public class IntegrationPublisher extends Publisher {
         public boolean isApplicable(Class<? extends AbstractProject> jobType) {
             return true;
         }
+    }
+
+    public IntegrateAction getIntegrateAction(AbstractBuild build) {
+        IntegrateAction ia = build.getAction(IntegrateAction.class);
+        //JENKINS-14725 If this is a promotion build, then we need to get the rootBuild
+        if (Jenkins.getInstance().getPlugin("promoted-builds")!=null) {
+            if(build instanceof hudson.plugins.promoted_builds.Promotion){
+                AbstractBuild<?,?> rootBuild = build.getRootBuild();
+                ia = rootBuild.getAction(IntegrateAction.class);
+            }
+        }
+        return ia;
     }
 }
