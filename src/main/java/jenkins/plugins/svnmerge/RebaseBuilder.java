@@ -1,5 +1,7 @@
 package jenkins.plugins.svnmerge;
 
+import static jenkins.plugins.svnmerge.Utility.rootBuildOf;
+
 import hudson.Extension;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
@@ -35,7 +37,8 @@ public class RebaseBuilder extends Builder {
 
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
-        AbstractProject<?,?> project = build.getProject();
+        //JENKINS-25769 If this is a promotion build, then we need to get the rootBuild
+        AbstractProject<?,?> project = rootBuildOf(build).getProject();
         FeatureBranchProperty property = project.getProperty(FeatureBranchProperty.class);
 
         if (property == null) {
