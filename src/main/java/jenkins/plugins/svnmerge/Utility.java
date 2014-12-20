@@ -1,6 +1,7 @@
 package jenkins.plugins.svnmerge;
 
 import hudson.EnvVars; 
+import hudson.model.AbstractBuild;
 import hudson.model.Computer;
 import hudson.model.Job;
 import hudson.scm.SubversionSCM.ModuleLocation;
@@ -13,13 +14,27 @@ import java.util.logging.Logger;
 
 import jenkins.model.Jenkins;
 
-public class Utility {
+class Utility {
+
+    /**
+     * Get either the provided build of the root build of the provided
+     * build if it is a promotion one.
+     */
+    static AbstractBuild<?,?> rootBuildOf(AbstractBuild build) {
+        if (Jenkins.getInstance().getPlugin("promoted-builds") != null) {
+            if (build instanceof hudson.plugins.promoted_builds.Promotion) {
+                return build.getRootBuild();
+            }
+        }
+        
+        return build;
+    }
 
 	
     /**
      * Expands the system variables, the node environment variables and the project parameters
      */
-	public static ModuleLocation getExpandedLocation(ModuleLocation ml, Job<?,?> project) {
+	static ModuleLocation getExpandedLocation(ModuleLocation ml, Job<?,?> project) {
 		 ModuleLocation location= ml.getExpandedLocation(project);
 		// expand system variables
 		Computer c = Computer.currentComputer();

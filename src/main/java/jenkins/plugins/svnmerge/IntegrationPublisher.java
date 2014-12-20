@@ -1,5 +1,7 @@
 package jenkins.plugins.svnmerge;
 
+import static jenkins.plugins.svnmerge.Utility.rootBuildOf;
+
 import hudson.Extension;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
@@ -39,7 +41,8 @@ public class IntegrationPublisher extends Publisher {
         if(build.getResult().isWorseThan(Result.SUCCESS))
             return true;
 
-        IntegrateAction ia= getIntegrateAction(build);
+        //JENKINS-14725 If this is a promotion build, then we need to get the rootBuild
+        IntegrateAction ia = rootBuildOf(build).getAction(IntegrateAction.class);
         if(ia==null) {
             listener.getLogger().println("Upstream Subversion URL is not specified. Configuration problem?");
             return false;
@@ -64,17 +67,5 @@ public class IntegrationPublisher extends Publisher {
         public boolean isApplicable(Class<? extends AbstractProject> jobType) {
             return true;
         }
-    }
-
-    public IntegrateAction getIntegrateAction(AbstractBuild build) {
-        IntegrateAction ia = build.getAction(IntegrateAction.class);
-        //JENKINS-14725 If this is a promotion build, then we need to get the rootBuild
-        if (Jenkins.getInstance().getPlugin("promoted-builds")!=null) {
-            if(build instanceof hudson.plugins.promoted_builds.Promotion){
-                AbstractBuild<?,?> rootBuild = build.getRootBuild();
-                ia = rootBuild.getAction(IntegrateAction.class);
-            }
-        }
-        return ia;
     }
 }
