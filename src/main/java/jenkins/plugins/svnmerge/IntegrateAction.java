@@ -15,8 +15,10 @@ import hudson.scm.SubversionChangeLogSet.LogEntry;
 import hudson.scm.SubversionSCM;
 import hudson.scm.SubversionSCM.ModuleLocation;
 import hudson.scm.SubversionSCM.SvnInfo;
-import hudson.scm.SubversionTagAction;
 import hudson.security.ACL;
+import hudson.security.Permission;
+import hudson.security.PermissionGroup;
+import hudson.security.PermissionScope;
 import hudson.util.LogTaskListener;
 import jenkins.model.Jenkins;
 import jenkins.plugins.svnmerge.FeatureBranchProperty.IntegrationResult;
@@ -30,9 +32,8 @@ import javax.servlet.ServletException;
 import java.io.File;
 import java.io.IOException;
 import java.util.Hashtable;
-import java.util.List;
-import java.util.Set;
 import java.util.logging.Logger;
+
 import static java.util.logging.Level.WARNING;
 
 /**
@@ -42,7 +43,12 @@ import static java.util.logging.Level.WARNING;
  * @author Kohsuke Kawaguchi
  */
 public class IntegrateAction extends AbstractSvnmergeTaskAction<IntegrateSetting> implements BuildBadgeAction {
-    public final AbstractBuild<?,?> build;
+
+     protected Permission getPermission() {
+         return INTEGRATE_PERMISSION;
+     }
+
+	public final AbstractBuild<?,?> build;
 
     /**
      * If the integration is successful, set to the revision of the commit of the merge.

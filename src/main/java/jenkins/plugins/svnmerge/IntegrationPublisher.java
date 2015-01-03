@@ -1,5 +1,7 @@
 package jenkins.plugins.svnmerge;
 
+import static jenkins.plugins.svnmerge.Utility.rootBuildOf;
+
 import hudson.Extension;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
@@ -10,6 +12,7 @@ import hudson.scm.SubversionSCM.SvnInfo;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Publisher;
+import jenkins.model.Jenkins;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
@@ -38,7 +41,8 @@ public class IntegrationPublisher extends Publisher {
         if(build.getResult().isWorseThan(Result.SUCCESS))
             return true;
 
-        IntegrateAction ia = build.getAction(IntegrateAction.class);
+        //JENKINS-14725 If this is a promotion build, then we need to get the rootBuild
+        IntegrateAction ia = rootBuildOf(build).getAction(IntegrateAction.class);
         if(ia==null) {
             listener.getLogger().println("Upstream Subversion URL is not specified. Configuration problem?");
             return false;
