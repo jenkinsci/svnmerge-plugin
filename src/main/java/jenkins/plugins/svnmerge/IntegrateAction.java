@@ -10,6 +10,7 @@ import hudson.model.Queue.Task;
 import hudson.model.TaskListener;
 import hudson.scm.ChangeLogSet.Entry;
 import hudson.scm.SCM;
+import hudson.scm.SVNRevisionState;
 import hudson.scm.SubversionChangeLogSet.LogEntry;
 import hudson.scm.SubversionSCM;
 import hudson.scm.SubversionSCM.ModuleLocation;
@@ -133,34 +134,26 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction<IntegrateSetting
 		if (!(scm instanceof SubversionSCM)) {
 			return null;
 		} 
+
 		// TODO: check for multiple locations ?
 		SubversionSCM svn = (SubversionSCM) scm;
 		ModuleLocation[] locations = svn.getLocations(); 
-		if (locations.length == 1) {
-			TaskListener listener = new LogTaskListener(LOGGER, WARNING);
-			ModuleLocation firstLocation = svn.getLocations()[0];
-			// expand system and node environment variables as well as the
-			// project parameters
-			firstLocation = Utility.getExpandedLocation(firstLocation,
-					getProject());
-			if (!firstLocation.isIgnoreExternalsOption()) {
-				try {
-					return new SvnInfo(firstLocation.getSVNURL()
-							.toDecodedString(), Long.parseLong(build
-							.getEnvironment(listener).get("SVN_REVISION_1")));
-				} catch (SVNException e) {
-					LOGGER.log(WARNING, "Could not get SVN URL and revision", e);
-				} catch (NumberFormatException e) {
-					LOGGER.log(WARNING, "Could not get SVN URL and revision", e);
-				} catch (IOException e) {
-					LOGGER.log(WARNING, "Could not get SVN URL and revision", e);
-				} catch (InterruptedException e) {
-					LOGGER.log(WARNING, "Could not get SVN URL and revision", e);
-				}
-			}
-		}
 
-		return null; // can't handle more than 1 URLs
+        ModuleLocation firstLocation = svn.getLocations()[0];
+        // expand system and node environment variables as well as the
+        // project parameters
+        firstLocation = Utility.getExpandedLocation(firstLocation, getProject());
+
+        try {
+            SVNRevisionState state = build.getAction(SVNRevisionState.class);
+            long revision = state.getRevision(firstLocation.getURL());
+
+            return new SvnInfo(firstLocation.getSVNURL().toDecodedString(), revision);
+        } catch (SVNException e) {
+            LOGGER.log(WARNING, "Could not get SVN URL and revision", e);
+        }
+
+		return null;
 	}
 
     /**
@@ -179,7 +172,6 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction<IntegrateSetting
     public long perform(TaskListener listener, SvnInfo src) throws IOException, InterruptedException {
         String commitMessage = getCommitMessage();
 
-        // if this is -1, it doesn't capture
         IntegrationResult r = getProperty().integrate(listener, src.url, src.revision, commitMessage);
         integratedRevision = r.mergeCommit;
         integrationSource = r.integrationSource;
