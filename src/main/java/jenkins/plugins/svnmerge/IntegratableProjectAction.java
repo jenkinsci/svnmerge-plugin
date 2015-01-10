@@ -26,7 +26,9 @@ import org.kohsuke.stapler.StaplerResponse;
 import org.kohsuke.stapler.interceptor.RequirePOST;
 import org.tmatesoft.svn.core.SVNException;
 import org.tmatesoft.svn.core.SVNNodeKind;
+import org.tmatesoft.svn.core.SVNProperties;
 import org.tmatesoft.svn.core.SVNURL;
+import org.tmatesoft.svn.core.wc.SVNCopySource;
 import org.tmatesoft.svn.core.wc.SVNInfo;
 import org.tmatesoft.svn.core.wc.SVNRevision;
 
@@ -255,14 +257,17 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
         try {
             for (String urlToCopyTo : urlsToCopyTo) {
             	SVNURL dst = SVNURL.parseURIEncoded(urlToCopyTo);
-            	svnMgr.getCopyClient().doCopy(originalLocation.getSVNURL(), 
-            								  SVNRevision.HEAD,
-            								  dst, 
-            								  false, 
-            								  true,
-            								  commitMessage
-            								  );
-			}
+            	svnMgr.getCopyClient().doCopy(
+                        new SVNCopySource[] {
+                                new SVNCopySource(SVNRevision.HEAD, SVNRevision.HEAD, originalLocation.getSVNURL()) },
+                        dst, 
+            		false, 
+            		true,
+            		true,
+            		commitMessage,
+                        new SVNProperties());
+            }
+            
             return true;
         } catch (SVNException e) {
             sendError(e);
