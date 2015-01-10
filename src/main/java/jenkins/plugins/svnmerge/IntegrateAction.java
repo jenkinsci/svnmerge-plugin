@@ -134,33 +134,26 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction<IntegrateSetting
 		if (!(scm instanceof SubversionSCM)) {
 			return null;
 		} 
+
 		// TODO: check for multiple locations ?
 		SubversionSCM svn = (SubversionSCM) scm;
 		ModuleLocation[] locations = svn.getLocations(); 
-		if (locations.length == 1) {
-			TaskListener listener = new LogTaskListener(LOGGER, WARNING);
-			ModuleLocation firstLocation = svn.getLocations()[0];
-			// expand system and node environment variables as well as the
-			// project parameters
-			firstLocation = Utility.getExpandedLocation(firstLocation,
-					getProject());
-			if (!firstLocation.isIgnoreExternalsOption()) {
-				try {
-                    SVNRevisionState state = build.getAction(SVNRevisionState.class);
-                    long revision = state.getRevision(firstLocation.getURL());
 
-					return new SvnInfo(firstLocation.getSVNURL().toDecodedString(), revision);
-				} catch (SVNException e) {
-					LOGGER.log(WARNING, "Could not get SVN URL and revision", e);
-				} catch (IOException e) {
-					LOGGER.log(WARNING, "Could not get SVN URL and revision", e);
-				} catch (InterruptedException e) {
-					LOGGER.log(WARNING, "Could not get SVN URL and revision", e);
-				}
-			}
-		}
+        ModuleLocation firstLocation = svn.getLocations()[0];
+        // expand system and node environment variables as well as the
+        // project parameters
+        firstLocation = Utility.getExpandedLocation(firstLocation, getProject());
 
-		return null; // can't handle more than 1 URLs
+        try {
+            SVNRevisionState state = build.getAction(SVNRevisionState.class);
+            long revision = state.getRevision(firstLocation.getURL());
+
+            return new SvnInfo(firstLocation.getSVNURL().toDecodedString(), revision);
+        } catch (SVNException e) {
+            LOGGER.log(WARNING, "Could not get SVN URL and revision", e);
+        }
+
+		return null;
 	}
 
     /**
