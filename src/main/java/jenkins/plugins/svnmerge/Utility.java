@@ -1,6 +1,6 @@
 package jenkins.plugins.svnmerge;
 
-import hudson.EnvVars; 
+import hudson.EnvVars;
 import hudson.model.AbstractBuild;
 import hudson.model.Computer;
 import hudson.model.Job;
@@ -19,10 +19,16 @@ class Utility {
     /**
      * Get either the provided build of the root build of the provided
      * build if it is a promotion one.
+     * also use the root build of a matrix build
      */
     static AbstractBuild<?,?> rootBuildOf(AbstractBuild build) {
         if (Jenkins.getInstance().getPlugin("promoted-builds") != null) {
             if (build instanceof hudson.plugins.promoted_builds.Promotion) {
+                return build.getRootBuild();
+            }
+        }
+        if (Jenkins.getInstance().getPlugin("matrix-project") != null) {
+            if (build instanceof hudson.matrix.MatrixBuild) {
                 return build.getRootBuild();
             }
         }
