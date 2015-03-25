@@ -8,6 +8,7 @@ import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
 import hudson.model.PermalinkProjectAction.Permalink;
+import hudson.model.Result;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.ListBoxModel;
@@ -28,11 +29,13 @@ public class RebaseBuilder extends Builder {
      * Indicates whether to stop the build if the merge fails. 
      */
     public final boolean stopBuildIfMergeFails;
+    public final boolean setUnstableIfMergeFails;
 
     @DataBoundConstructor
-    public RebaseBuilder(String permalink, boolean stopBuildIfMergeFails) {
+    public RebaseBuilder(String permalink, boolean stopBuildIfMergeFails, boolean setUnstableIfMergeFails) {
         this.permalink = permalink;
         this.stopBuildIfMergeFails = stopBuildIfMergeFails;
+        this.setUnstableIfMergeFails = setUnstableIfMergeFails;
     }
 
     @Override
@@ -48,6 +51,9 @@ public class RebaseBuilder extends Builder {
 
     	RebaseAction rebaseAction = new  RebaseAction(project);
     	long result = rebaseAction.perform(listener,new RebaseSetting(permalink));
+        if(result<0){
+            project.setResult(Result.UNSTABLE);
+        }
         return !stopBuildIfMergeFails || result >= 0;
     }
 
