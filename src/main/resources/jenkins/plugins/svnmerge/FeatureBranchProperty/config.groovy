@@ -13,6 +13,13 @@ f.optionalBlock(name:"svnmerge", title:_("This project builds a Subversion featu
                     }
                 }
             }
+            f.entry(title:_("Rebase commit prefix")){
+            	f.textbox(id:h.generateId(), field:"rebaseCommitPrefix", clazz:"setting-input"){
+            		descriptor.listIntegratableProjects().each { u ->
+                        f.textbox(value:u.name)
+                    }
+            	}
+            }
         }
     }
 }
