@@ -37,7 +37,7 @@ public class FeatureBranchPropertyTest extends HudsonTestCase {
 
     public void testConfigRoundtrip2() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
-        p.addProperty(new FeatureBranchProperty("xyz"));
+        p.addProperty(new FeatureBranchProperty("xyz","zyx"));
         HtmlPage page = new WebClient().getPage(p, "configure");
         submit(page.getFormByName("config"));
         FeatureBranchProperty ujp = p.getProperty(FeatureBranchProperty.class);
@@ -56,7 +56,7 @@ public class FeatureBranchPropertyTest extends HudsonTestCase {
 		ParameterDefinition def1 = new StringParameterDefinition("REPO", "a");
 		ParameterDefinition def2 = new StringParameterDefinition("PROJECT", "b");
 		p.addProperty(new ParametersDefinitionProperty(def1,def2));
-		FeatureBranchProperty jobProp = new FeatureBranchProperty(p.getName());
+		FeatureBranchProperty jobProp = new FeatureBranchProperty(p.getName(),null);
 		FreeStyleProject p2 = createFreeStyleProject();
 		p2.addProperty(jobProp);
 		assertEquals( "https://root/a/b/trunk",jobProp.getUpstreamURL().toDecodedString());
