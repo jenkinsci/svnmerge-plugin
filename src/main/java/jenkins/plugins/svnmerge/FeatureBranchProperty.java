@@ -57,6 +57,8 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.annotation.Nullable;
+
 import static org.tmatesoft.svn.core.SVNDepth.*;
 import static org.tmatesoft.svn.core.wc.SVNRevision.*;
 
@@ -75,18 +77,27 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
      */
     private String upstream;
     private transient RebaseAction rebaseAction;
+    
+    private final String commitPrefix;
 
     @DataBoundConstructor
-    public FeatureBranchProperty(String upstream) {
+    public FeatureBranchProperty(String upstream, String rebaseCommitPrefix) {
         if (upstream == null) {
             throw new NullPointerException("upstream");
         }
         this.upstream = upstream;
+        this.commitPrefix = (rebaseCommitPrefix == null || "".equals(rebaseCommitPrefix)) ? 
+				RebaseAction.COMMIT_MESSAGE_PREFIX : rebaseCommitPrefix;;
     }
 
     public String getUpstream() {
         return upstream;
     }
+    
+    public String getRebaseCommitPrefix() {
+		return commitPrefix;
+	}
+    
 
     /**
      * Gets the upstream project, or null if no such project was found.
@@ -210,10 +221,10 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
                     } else {
 						try {
 							logger.println("Committing changes");
+							
 							SVNCommitClient cc = cm.getCommitClient();
 							SVNCommitInfo ci = cc.doCommit(new File[] { mr },
-									false, RebaseAction.COMMIT_MESSAGE_PREFIX
-											+ "Rebasing from " + up + "@"
+									false, commitPrefix	+ "Rebasing from " + up + "@"
 											+ mergeRev, null, null, false,
 									false, INFINITY);
 							if (ci.getNewRevision() < 0) {
@@ -323,8 +334,8 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
                                 if (!changesFound.booleanValue()) {
                                 	String message = e.getMessage();
                                 	
-                                    if (!message.startsWith(RebaseAction.COMMIT_MESSAGE_PREFIX)
-                                    		&& !message.startsWith(IntegrateAction.COMMIT_MESSAGE_PREFIX)) {
+                                    if (!message.startsWith(commitPrefix)
+                                    		&& !message.startsWith(commitPrefix)) {
                                     	changesFound.setValue(true);
                                     }
                                 }

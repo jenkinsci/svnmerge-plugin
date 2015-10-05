@@ -117,6 +117,16 @@ l.layout(norefresh:"true",title:_("title",my.project.displayName)) {
                         }
                     
                     }
+
+                    tr {
+                        td (class: "setting-leftspace")
+                        td (class: "setting-name") {
+                            text(_("Rebase commit prefix")+":")
+                        }
+                        td (class: "setting-main") {
+                            input (type:"text", name:"rebaseCommitPrefix", class:"setting-input")
+                        }
+                    }
                 
                 }
 				

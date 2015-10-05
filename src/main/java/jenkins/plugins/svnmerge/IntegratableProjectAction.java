@@ -108,7 +108,9 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
     						@QueryParameter String commitMessage, 
     						@QueryParameter String branchLocation,
     						@QueryParameter boolean createTag,
-    						@QueryParameter String tagLocation) throws ServletException, IOException {
+    						@QueryParameter String tagLocation,
+    						@QueryParameter boolean useCustomMergeCommitPrefix,
+    						@QueryParameter String rebaseCommitPrefix) throws ServletException, IOException {
         
         name = Util.fixEmptyAndTrim(name);
         
@@ -216,7 +218,8 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
     	BulkChange bc = new BulkChange(copy);
     	try {
     		copy.removeProperty(IntegratableProject.class);
-    		((AbstractProject)copy).addProperty(new FeatureBranchProperty(project.getName())); // pointless cast for working around javac bug as of JDK1.6.0_02
+    		((AbstractProject)copy).addProperty(new FeatureBranchProperty(project.getName(), 
+    				rebaseCommitPrefix)); // pointless cast for working around javac bug as of JDK1.6.0_02
     		// update the SCM config to point to the branch
     		SubversionSCM svnScm = (SubversionSCM)copy.getScm();
     		copy.setScm(
