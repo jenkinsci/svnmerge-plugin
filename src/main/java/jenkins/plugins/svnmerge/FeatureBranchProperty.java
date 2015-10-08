@@ -76,7 +76,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
     private String upstream;
     private transient RebaseAction rebaseAction;
     
-    private final String commitPrefix;
+    private final String rebaseCommitPrefix;
 
     @DataBoundConstructor
     public FeatureBranchProperty(String upstream, String rebaseCommitPrefix) {
@@ -84,8 +84,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
             throw new NullPointerException("upstream");
         }
         this.upstream = upstream;
-        this.commitPrefix = (rebaseCommitPrefix == null || "".equals(rebaseCommitPrefix)) ? 
-				RebaseAction.COMMIT_MESSAGE_PREFIX : rebaseCommitPrefix;;
+        this.rebaseCommitPrefix = rebaseCommitPrefix;
     }
 
     public String getUpstream() {
@@ -93,7 +92,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
     }
     
     public String getRebaseCommitPrefix() {
-		return commitPrefix;
+		return rebaseCommitPrefix;
 	}
     
 
@@ -222,7 +221,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
 							
 							SVNCommitClient cc = cm.getCommitClient();
 							SVNCommitInfo ci = cc.doCommit(new File[] { mr },
-									false, commitPrefix	+ "Rebasing from " + up + "@"
+									false, getCommitPrefix() + " Rebasing from " + up + "@"
 											+ mergeRev, null, null, false,
 									false, INFINITY);
 							if (ci.getNewRevision() < 0) {
@@ -332,7 +331,8 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
                                 if (!changesFound.booleanValue()) {
                                 	String message = e.getMessage();
                                 	
-                                    if (!message.startsWith(commitPrefix)
+                                    String commitPrefix = getCommitPrefix();
+									if (!message.startsWith(commitPrefix)
                                     		&& !message.startsWith(commitPrefix)) {
                                     	changesFound.setValue(true);
                                     }
@@ -480,5 +480,11 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
         }
     }
 
+    private String getCommitPrefix(){
+    	return (rebaseCommitPrefix == null || "".equals(rebaseCommitPrefix)) ? 
+    			RebaseAction.COMMIT_MESSAGE_PREFIX : rebaseCommitPrefix;
+    }
+    
     private static final Logger LOGGER = Logger.getLogger(FeatureBranchProperty.class.getName());
+    
 }
