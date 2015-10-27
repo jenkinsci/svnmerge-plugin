@@ -221,7 +221,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
 							
 							SVNCommitClient cc = cm.getCommitClient();
 							SVNCommitInfo ci = cc.doCommit(new File[] { mr },
-									false, getCommitPrefix() + " Rebasing from " + up + "@"
+									false, getFinalRebaseCommitPrefix() + " Rebasing from " + up + "@"
 											+ mergeRev, null, null, false,
 									false, INFINITY);
 							if (ci.getNewRevision() < 0) {
@@ -331,7 +331,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
                                 if (!changesFound.booleanValue()) {
                                 	String message = e.getMessage();
                                 	
-                                    String commitPrefix = getCommitPrefix();
+                                    String commitPrefix = getFinalRebaseCommitPrefix();
 									if (!message.startsWith(commitPrefix)
                                     		&& !message.startsWith(commitPrefix)) {
                                     	changesFound.setValue(true);
@@ -362,7 +362,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
                     } else {
                         logger.println("Committing changes to the upstream");
                         SVNCommitClient cc = cm.getCommitClient();
-                        ci = cc.doCommit(new File[]{mr}, false, commitMessage+"\n"+mergeUrl+"@"+mergeRev, null, null, false, false, INFINITY);
+                        ci = cc.doCommit(new File[]{mr}, false, getCommitPrefix() + commitMessage+"\n"+mergeUrl+"@"+mergeRev, null, null, false, false, INFINITY);
                         if(ci.getNewRevision()<0)
                             logger.println("  No changes since the last integration");
                         else
@@ -410,7 +410,7 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
                             return new IntegrationResult(-1,mergeRev);
                         }
 
-                        String msg = RebaseAction.COMMIT_MESSAGE_PREFIX+"Rebasing with the integration commit that was just made in rev."+trunkCommit;
+                        String msg = getCommitPrefix() + RebaseAction.COMMIT_MESSAGE_PREFIX+"Rebasing with the integration commit that was just made in rev."+trunkCommit;
                         SVNCommitInfo bci = cc.doCommit(new File[]{mr}, false, msg, null, null, false, false, INFINITY);
                         logger.println("  committed revision "+bci.getNewRevision());
                     }
@@ -480,9 +480,13 @@ public class FeatureBranchProperty extends JobProperty<AbstractProject<?,?>> imp
         }
     }
 
-    private String getCommitPrefix(){
+    private String getFinalRebaseCommitPrefix(){
     	return (rebaseCommitPrefix == null || "".equals(rebaseCommitPrefix)) ? 
     			RebaseAction.COMMIT_MESSAGE_PREFIX : rebaseCommitPrefix;
+    }
+    
+    private String getCommitPrefix(){
+    	return rebaseCommitPrefix == null ? "": rebaseCommitPrefix;
     }
     
     private static final Logger LOGGER = Logger.getLogger(FeatureBranchProperty.class.getName());
