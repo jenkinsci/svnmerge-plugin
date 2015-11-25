@@ -3,12 +3,19 @@ package jenkins.plugins.svnmerge;
 import hudson.BulkChange;
 import hudson.Util;
 import hudson.model.Action;
+import hudson.model.Item;
+import hudson.model.ItemGroup;
+import hudson.model.Items;
+import hudson.model.TopLevelItem;
+import hudson.model.AbstractItem;
 import hudson.model.AbstractModelObject;
 import hudson.model.AbstractProject;
+import hudson.model.Job;
 import hudson.scm.SvnClientManager;
 import hudson.scm.SCM;
 import hudson.scm.SubversionSCM;
 import hudson.scm.SubversionSCM.ModuleLocation;
+import hudson.security.AccessControlled;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -17,6 +24,7 @@ import java.util.List;
 
 import javax.servlet.ServletException;
 
+import jenkins.model.DirectlyModifiableTopLevelItemGroup;
 import jenkins.model.Jenkins;
 
 import org.apache.commons.lang.StringUtils;
@@ -70,9 +78,11 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
      * Gets feature branches for this project.
      */
     public List<AbstractProject<?,?>> getBranches() {
-        String n = project.getName();
+        // looking for the project's full name because we want to search nested projects
+    	String n = project.getFullName();
         List<AbstractProject<?,?>> r  = new ArrayList<AbstractProject<?,?>>();
-        for (AbstractProject<?,?> p : Jenkins.getInstance().getItems(AbstractProject.class)) {
+        // iterating over all items in tree (recursively)
+        for (AbstractProject<?,?> p : Jenkins.getInstance().getAllItems(AbstractProject.class)) {
             FeatureBranchProperty fbp = p.getProperty(FeatureBranchProperty.class);
             if(fbp!=null && fbp.getUpstream().equals(n))
                 r.add(p);
@@ -214,9 +224,17 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
     	// copy a job, and adjust its properties for integration
     	AbstractProject<?,?> copy = Jenkins.getInstance().copy(project, project.getName() + "-" + name.replaceAll("/", "-"));
     	BulkChange bc = new BulkChange(copy);
+
     	try {
+
+    		// moving the copy to its parent location
+    		moveProjectToItsUpstreamProjectLocation(copy, project);
+    		// the copy doesn't born accepting integration from subversion feature branches..
     		copy.removeProperty(IntegratableProject.class);
-    		((AbstractProject)copy).addProperty(new FeatureBranchProperty(project.getName())); // pointless cast for working around javac bug as of JDK1.6.0_02
+			// ... and it's a feature branch of its upstream project (which can
+			// be located anywhere in the tree, that's why we are pointing
+			// to its full name)
+    		((AbstractProject)copy).addProperty(new FeatureBranchProperty(project.getFullName())); // pointless cast for working around javac bug as of JDK1.6.0_02
     		// update the SCM config to point to the branch
     		SubversionSCM svnScm = (SubversionSCM)copy.getScm();
     		copy.setScm(
@@ -239,7 +257,39 @@ public class IntegratableProjectAction extends AbstractModelObject implements Ac
     	
     	rsp.sendRedirect2(req.getContextPath()+"/"+copy.getUrl());
     }
-    
+
+    /**
+     * Utility method to move a project to the same location of its upstream project.
+     *
+     * @param project
+     * @param upstreamProject
+     * @throws IOException
+     */
+    @SuppressWarnings("unchecked")
+	private <I extends AbstractItem & TopLevelItem> void moveProjectToItsUpstreamProjectLocation(
+			AbstractProject<?, ?> project, AbstractProject<?, ?> upstreamProject)
+			throws IOException {
+
+    	// we need to check if the upstream project isn't in the root (hudson.model.Hudson)
+		if (upstreamProject.getParent() != null
+				&& (upstreamProject.getParent() instanceof DirectlyModifiableTopLevelItemGroup)
+				&& !(upstreamProject.getParent() instanceof Jenkins)) {
+
+			// get the right destination
+			DirectlyModifiableTopLevelItemGroup destination = (DirectlyModifiableTopLevelItemGroup) upstreamProject
+					.getParent();
+            // check if we can move to this destination
+			if (!(destination == project.getParent() || destination
+					.canAdd((TopLevelItem) project)
+					&& ((AccessControlled) destination)
+							.hasPermission(Job.CREATE))) {
+                return;
+            }
+			// moving
+            Items.move((I)project, destination);
+        }
+    }
+
     /**
      * Utility method for SVN copies creation.
      * First checks if all the given urls already exist; if any exist, creates a copy for each of them.
