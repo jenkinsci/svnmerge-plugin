@@ -122,13 +122,17 @@ public class MergeTest extends HudsonTestCase {
      */
     private boolean trunkHasE() throws SVNException {
         // make sure the merge went in by checking if /trunk/e exists.
-        SVNRepository rep = SVNRepositoryFactory.create(upp.getUpstreamURL());
-        long latest = rep.getLatestRevision();
-        try {
-            return latest==rep.getFile("/trunk/e", latest,new SVNProperties(), null);
-        } catch (SVNException e) {
-            return false;
+        boolean toReturn = false;
+        for(SVNURL url : upp.getUpstreamURL()){
+            SVNRepository rep = SVNRepositoryFactory.create(url);
+            long latest = rep.getLatestRevision();
+            try {
+                toReturn = latest==rep.getFile("/trunk/e", latest,new SVNProperties(), null);
+            } catch (SVNException e) {
+                return false;
+            }
         }
+        return toReturn;
     }
 
     /**

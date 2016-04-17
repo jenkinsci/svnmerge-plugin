@@ -16,6 +16,7 @@ import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * @author Kohsuke Kawaguchi
@@ -50,11 +51,21 @@ public class RebaseBuilder extends Builder {
         }
 
     	RebaseAction rebaseAction = new  RebaseAction(project);
-    	long result = rebaseAction.perform(listener,new RebaseSetting(permalink));
-        if(result<0){
-            build.setResult(Result.UNSTABLE);
+    	List<Long> results = rebaseAction.perform(listener,new RebaseSetting(permalink));
+        boolean buildStable = true;
+
+        if(results != null && results.size() > 0){
+            for(Long result : results){
+                if(result<0){
+                    build.setResult(Result.UNSTABLE);
+                    buildStable = false;
+                }
+            }
+        } else {
+            buildStable = false;
         }
-        return !stopBuildIfMergeFails || result >= 0;
+
+        return !stopBuildIfMergeFails || buildStable;
     }
 
     @Extension

@@ -27,6 +27,7 @@ import javax.servlet.ServletException;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.Future;
 
 /**
@@ -90,7 +91,7 @@ public abstract class AbstractSvnmergeTaskAction<P> extends TaskAction {
      * <p>
      * This requires that the calling thread owns the workspace.
      */
-    /*package*/ abstract long perform(TaskListener listener, P param) throws IOException, InterruptedException;
+    /*package*/ abstract List<Long> perform(TaskListener listener, P param) throws IOException, InterruptedException;
 
     /**
      * Which page to render in the top page?

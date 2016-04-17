@@ -16,11 +16,14 @@ import jenkins.model.Jenkins;
 
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
+import org.tmatesoft.svn.core.wc.SVNInfo;
 
 import javax.servlet.ServletException;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * {@link AbstractProject}-level action to rebase changes from the upstream branch into the current branch.
@@ -89,8 +92,9 @@ public class RebaseAction extends AbstractSvnmergeTaskAction<RebaseSetting> {
      * <p>
      * This requires that the calling thread owns the workspace.
      */
-    /*package*/ long perform(TaskListener listener, RebaseSetting param) throws IOException, InterruptedException {
-        long rev = param.revision;
+    /*package*/ List<Long> perform(TaskListener listener, RebaseSetting param) throws IOException, InterruptedException {
+        List<Long> revisions = new ArrayList<Long>();
+        revisions.add(param.revision);
 
         if (param.permalink!=null) {
             AbstractProject<?, ?> up = getProperty().getUpstreamProject();
@@ -99,20 +103,29 @@ public class RebaseAction extends AbstractSvnmergeTaskAction<RebaseSetting> {
                 Run<?,?> b = p.resolve(up);
                 if (b==null) {
                     listener.getLogger().println("No build that matches "+p.getDisplayName()+". Rebase is no-nop.");
-                    return -1;
+                    return null;
                 }
 
                 SubversionTagAction a = b.getAction(SubversionTagAction.class);
                 if (a==null)
                     throw new AbortException("Unable to determine the Subversion revision number from "+b.getFullDisplayName());
 
-                // TODO: what to do if this involves multiple URLs?
-                SvnInfo sv = a.getTags().keySet().iterator().next();
-                rev = sv.revision;
+                revisions = new ArrayList<Long>();
+                for(SvnInfo sv : a.getTags().keySet()){
+                    long currentRev = sv.revision;
+                    revisions.add(currentRev);
+                }
             }
         }
 
-        long integratedRevision = getProperty().rebase(listener, rev);
+        List<Long> integratedRevisions = new ArrayList<Long>();
+        for(Long rev : revisions){
+            List<Long> integrated = getProperty().rebase(listener, rev);
+            if(integrated != null)
+                integratedRevisions.addAll(integrated);
+            else
+                return null;
+        }
 //        if(integratedRevision>0) {
 //            // record this integration as a fingerprint.
 //            // this will allow us to find where this change is integrated.
@@ -120,7 +133,7 @@ public class RebaseAction extends AbstractSvnmergeTaskAction<RebaseSetting> {
 //                    build, IntegrateAction.class.getName(),
 //                    getFingerprintKey());
 //        }
-        return integratedRevision;
+        return integratedRevisions;
     }
 
     /**

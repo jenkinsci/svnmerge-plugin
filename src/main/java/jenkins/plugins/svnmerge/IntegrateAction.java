@@ -31,7 +31,9 @@ import javax.servlet.ServletException;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.WARNING;
@@ -129,31 +131,31 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction<IntegrateSetting
     /**
      * URL and revision to be integrated from this action.
      */
-	public SvnInfo getSvnInfo() {
+	public List<SvnInfo> getSvnInfo() {
+        List<SvnInfo> toReturn = new ArrayList<SvnInfo>();
 		SCM scm = getProject().getScm();
 		if (!(scm instanceof SubversionSCM)) {
 			return null;
 		} 
 
-		// TODO: check for multiple locations ?
 		SubversionSCM svn = (SubversionSCM) scm;
-		ModuleLocation[] locations = svn.getLocations(); 
+        ModuleLocation[] locations = svn.getLocations();
+        for(ModuleLocation currentLocation : locations){
+            // expand system and node environment variables as well as the
+            // project parameters
+            currentLocation = Utility.getExpandedLocation(currentLocation, getProject());
 
-        ModuleLocation firstLocation = svn.getLocations()[0];
-        // expand system and node environment variables as well as the
-        // project parameters
-        firstLocation = Utility.getExpandedLocation(firstLocation, getProject());
+            try {
+                SVNRevisionState state = build.getAction(SVNRevisionState.class);
+                long revision = state.getRevision(currentLocation.getURL().toLowerCase());
 
-        try {
-            SVNRevisionState state = build.getAction(SVNRevisionState.class);
-            long revision = state.getRevision(firstLocation.getURL());
-
-            return new SvnInfo(firstLocation.getSVNURL().toDecodedString(), revision);
-        } catch (SVNException e) {
-            LOGGER.log(WARNING, "Could not get SVN URL and revision", e);
+                toReturn.add(new SvnInfo(currentLocation.getSVNURL().toDecodedString(), revision));
+            } catch (SVNException e) {
+                LOGGER.log(WARNING, "Could not get SVN URL and revision", e);
+            }
         }
 
-		return null;
+		return toReturn;
 	}
 
     /**
@@ -161,7 +163,7 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction<IntegrateSetting
      * <p>
      * This requires that the calling thread owns the workspace.
      */
-    /*package*/ long perform(TaskListener listener, IntegrateSetting _) throws IOException, InterruptedException {
+    /*package*/ List<Long> perform(TaskListener listener, IntegrateSetting _) throws IOException, InterruptedException {
         return perform(listener, getSvnInfo());
     }
 
@@ -169,21 +171,29 @@ public class IntegrateAction extends AbstractSvnmergeTaskAction<IntegrateSetting
      * @param src
      *      We are taking this revision and merge it into the upstream.
      */
-    public long perform(TaskListener listener, SvnInfo src) throws IOException, InterruptedException {
+    public List<Long> perform(TaskListener listener, List<SvnInfo> src) throws IOException, InterruptedException {
         String commitMessage = getCommitMessage();
+        List<Long> toReturn = new ArrayList<Long>();
 
-        IntegrationResult r = getProperty().integrate(listener, src.url, src.revision, commitMessage);
-        integratedRevision = r.mergeCommit;
-        integrationSource = r.integrationSource;
-        if(integratedRevision>0) {
-            // record this integration as a fingerprint.
-            // this will allow us to find where this change is integrated.
-            Jenkins.getInstance().getFingerprintMap().getOrCreate(
-                    build, IntegrateAction.class.getName(),
-                    getFingerprintKey());
+        List<IntegrationResult> integrations = getProperty().integrate(listener, src, commitMessage);
+
+        if(integrations != null && integrations.size() > 0){
+            for(IntegrationResult r : integrations){
+                integratedRevision = r.mergeCommit;
+                integrationSource = r.integrationSource;
+                if(integratedRevision>0) {
+                    // record this integration as a fingerprint.
+                    // this will allow us to find where this change is integrated.
+                    Jenkins.getInstance().getFingerprintMap().getOrCreate(
+                            build, IntegrateAction.class.getName(),
+                            getFingerprintKey());
+                }
+                build.save();
+                toReturn.add(integratedRevision);
+            }
         }
-        build.save();
-        return integratedRevision;
+
+        return toReturn;
     }
 
     /**
