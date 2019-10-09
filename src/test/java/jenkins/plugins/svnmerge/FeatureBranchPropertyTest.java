@@ -23,6 +23,8 @@ import hudson.slaves.NodeProperty;
 import hudson.slaves.EnvironmentVariablesNodeProperty;
 
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
+import org.tmatesoft.svn.core.SVNURL;
+import org.tmatesoft.svn.core.wc.SVNInfo;
 
 /**
  * @author Kohsuke Kawaguchi
@@ -48,7 +50,7 @@ public class FeatureBranchPropertyTest extends HudsonTestCase {
 	@Bug(24735)
 	public void testUpStreamURLwithParams()
 			throws Exception {
-		EnvironmentVariablesNodeProperty envNodeProp = new EnvironmentVariablesNodeProperty(new hudson.slaves.EnvironmentVariablesNodeProperty.Entry("ROOT_SVN_URL", "root/"));	
+		EnvironmentVariablesNodeProperty envNodeProp = new EnvironmentVariablesNodeProperty(new hudson.slaves.EnvironmentVariablesNodeProperty.Entry("ROOT_SVN_URL", "root/"));
 		Computer.currentComputer().getNode().getNodeProperties().add(envNodeProp);
 		Jenkins.getInstance().getDescriptorList(JobProperty.class).add(new FeatureBranchProperty.DescriptorImpl());
 		FreeStyleProject p = createFreeStyleProject();
@@ -59,7 +61,9 @@ public class FeatureBranchPropertyTest extends HudsonTestCase {
 		FeatureBranchProperty jobProp = new FeatureBranchProperty(p.getName());
 		FreeStyleProject p2 = createFreeStyleProject();
 		p2.addProperty(jobProp);
-		assertEquals( "https://root/a/b/trunk",jobProp.getUpstreamURL().toDecodedString());
+		for(SVNURL svnURL : jobProp.getUpstreamURL()){
+			assertEquals( "https://root/a/b/trunk",svnURL.toDecodedString());
+		}
 	}
     
     

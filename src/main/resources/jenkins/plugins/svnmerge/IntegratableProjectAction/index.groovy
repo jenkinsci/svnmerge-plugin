@@ -24,7 +24,7 @@ l.layout(norefresh:"true",title:_("title",my.project.displayName)) {
 		def repoLayout = my.repositoryLayout
 		p(_("Repository URL: "+repoLayout.scmModuleLocation))
 		p(_("Detected repository layout: "+repoLayout.layout))
-		if (StringUtils.isNotEmpty(repoLayout.subProjectName)) {
+		if (repoLayout.subProjectName != null) {
 			p(_("Detected subproject name: "+repoLayout.subProjectName))
 		}
 

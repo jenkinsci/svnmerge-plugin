@@ -16,6 +16,7 @@ import jenkins.model.Jenkins;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * {@link Publisher} that integrates the current workspace to the upstream. 
@@ -48,8 +49,17 @@ public class IntegrationPublisher extends Publisher {
             return false;
         }
 
-        if(ia.perform(listener,new IntegrateSetting())<0)
+        List<Long> integrationResults = ia.perform(listener,new IntegrateSetting());
+
+        if(integrationResults != null && integrationResults.size() > 0){
+            for(Long result : integrationResults){
+                if(result<0)
+                    build.setResult(Result.FAILURE);
+            }
+        } else {
             build.setResult(Result.FAILURE);
+        }
+
         return true;
     }
 
