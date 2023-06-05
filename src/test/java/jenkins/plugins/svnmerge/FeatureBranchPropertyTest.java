@@ -22,7 +22,7 @@ import hudson.scm.SubversionSCM;
 import hudson.slaves.NodeProperty;
 import hudson.slaves.EnvironmentVariablesNodeProperty;
 
-import com.gargoylesoftware.htmlunit.html.HtmlPage;
+import org.htmlunit.html.HtmlPage;
 
 /**
  * @author Kohsuke Kawaguchi
