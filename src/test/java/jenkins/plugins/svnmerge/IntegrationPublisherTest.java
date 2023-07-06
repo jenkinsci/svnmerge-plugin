@@ -2,7 +2,7 @@ package jenkins.plugins.svnmerge;
 
 import org.jvnet.hudson.test.HudsonTestCase;
 import hudson.model.FreeStyleProject;
-import com.gargoylesoftware.htmlunit.html.HtmlPage;
+import org.htmlunit.html.HtmlPage;
 
 /**
  * @author Kohsuke Kawaguchi

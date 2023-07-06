@@ -33,8 +33,8 @@ import java.net.URI;
 import java.util.concurrent.ExecutionException;
 import java.awt.*;
 
-import com.gargoylesoftware.htmlunit.html.HtmlPage;
-import com.gargoylesoftware.htmlunit.html.HtmlForm;
+import org.htmlunit.html.HtmlPage;
+import org.htmlunit.html.HtmlForm;
 
 /**
  * @author Kohsuke Kawaguchi
@@ -101,7 +101,7 @@ public class MergeTest extends HudsonTestCase {
     private HtmlPage createFeatureBranch(WebClient webClient, String name) throws Exception {
         HtmlPage p = webClient.getPage(trunk, "featureBranches");
         HtmlForm f = p.getFormByName("new");
-        f.getInputByName("name").setValueAttribute(name);
+        f.getInputByName("name").setValue(name);
         return submit(f);
     }
 
